@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(
   zelda3
   VERSION 0.1.0
-  LANGUAGES C)
+  LANGUAGES C CXX)
 
 # Find SDL2
 # 1. Look for a SDL2 package, 2. look for the SDL2 component and 3. fail if none can be found
