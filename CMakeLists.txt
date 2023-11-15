@@ -18,4 +18,5 @@ find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 
 add_subdirectory(snes)
 add_subdirectory(third_party)
+add_subdirectory(ppu_lib)
 add_subdirectory(src)

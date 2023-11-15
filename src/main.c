@@ -145,7 +145,7 @@ static SDL_HitTestResult HitTestCallback(SDL_Window *win, const SDL_Point *pt, v
 }
 
 static void DrawPpuFrameWithPerf() {
-  int render_scale = PpuGetCurrentRenderScale(g_zenv.ppu, g_ppu_render_flags);
+  int render_scale = g_zenv.ppu->methods.getCurrentRenderScale(g_zenv.ppu, g_ppu_render_flags);
   uint8 *pixel_buffer = 0;
   int pitch = 0;
 
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
   LoadLinkGraphics();
 
   ZeldaInitialize();
-  g_zenv.ppu->extraLeftRight = UintMin(g_config.extended_aspect_ratio, kPpuExtraLeftRight);
+  g_zenv.ppu->methods.setExtraLeftRight(g_zenv.ppu, UintMin(g_config.extended_aspect_ratio, kPpuExtraLeftRight));
   g_snes_width = (g_config.extended_aspect_ratio * 2 + 256);
   g_snes_height = (g_config.extend_y ? 240 : 224);
 

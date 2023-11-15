@@ -209,13 +209,13 @@ void NMI_DoUpdates() {  // 8089e0
   }
 
   if (flag_update_cgram_in_nmi) {
-    memcpy(g_zenv.ppu->cgram, main_palette_buffer, 0x200);
+    g_zenv.ppu->methods.writeCGRam(g_zenv.ppu, main_palette_buffer, 0x200);
   }
 
   flag_update_hud_in_nmi = 0;
   flag_update_cgram_in_nmi = 0;
 
-  memcpy(g_zenv.ppu->oam, &g_ram[0x800], 0x220);
+  g_zenv.ppu->methods.writeOam(g_zenv.ppu, &g_ram[0x800], 0x220);
 
   if (nmi_load_bg_from_vram) {
     const uint8 *p;

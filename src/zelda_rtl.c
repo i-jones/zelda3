@@ -62,7 +62,7 @@ static const uint8 kHdmaTableForPrayingScene[7] = {0xf8, AT_WORD(0x1b00), 0xf8, 
 
 void zelda_ppu_write(uint32_t adr, uint8_t val) {
   assert(adr >= INIDISP && adr <= STAT78);
-  ppu_write(g_zenv.ppu, (uint8)adr, val);
+  g_zenv.ppu->methods.write(g_zenv.ppu, (uint8)adr, val);
 }
 
 void zelda_ppu_write_word(uint32_t adr, uint16_t val) {
@@ -169,13 +169,13 @@ static void ConfigurePpuSideSpace() {
     extra_left = kPpuExtraLeftRight, extra_right = kPpuExtraLeftRight;
     extra_bottom = 16;
   }
-  PpuSetExtraSideSpace(g_zenv.ppu, extra_left, extra_right, extra_bottom);
+  g_zenv.ppu->methods.setExtraSideSpace(g_zenv.ppu, extra_left, extra_right, extra_bottom);
 }
 
 void ZeldaDrawPpuFrame(uint8 *pixel_buffer, size_t pitch, uint32 render_flags) {
   SimpleHdma hdma_chans[2];
 
-  PpuBeginDrawing(g_zenv.ppu, pixel_buffer, pitch, render_flags);
+  g_zenv.ppu->methods.beginDrawing(g_zenv.ppu, pixel_buffer, pitch, render_flags);
 
   dma_startDma(g_zenv.dma, HDMAEN_copy, true);
 
@@ -183,18 +183,18 @@ void ZeldaDrawPpuFrame(uint8 *pixel_buffer, size_t pitch, uint32 render_flags) {
   SimpleHdma_Init(&hdma_chans[1], &g_zenv.dma->channel[7]);
 
   // Cheat: Let the PPU impl know about the hdma perspective correction so it can avoid guessing.
-  if ((render_flags & kPpuRenderFlags_4x4Mode7) && g_zenv.ppu->mode == 7) {
+  if ((render_flags & kPpuRenderFlags_4x4Mode7) && g_zenv.ppu->methods.getMode(g_zenv.ppu) == 7) {
     if (hdma_chans[0].table == kMapModeHdma0)
-      PpuSetMode7PerspectiveCorrection(g_zenv.ppu, kMapMode_Zooms1[0], kMapMode_Zooms1[223]);
+      g_zenv.ppu->methods.setMode7PerspectiveCorrection(g_zenv.ppu, kMapMode_Zooms1[0], kMapMode_Zooms1[223]);
     else if (hdma_chans[0].table == kMapModeHdma1)
-      PpuSetMode7PerspectiveCorrection(g_zenv.ppu, kMapMode_Zooms2[0], kMapMode_Zooms2[223]);
+      g_zenv.ppu->methods.setMode7PerspectiveCorrection(g_zenv.ppu, kMapMode_Zooms2[0], kMapMode_Zooms2[223]);
     else if (hdma_chans[0].table == kAttractIndirectHdmaTab)
-      PpuSetMode7PerspectiveCorrection(g_zenv.ppu, hdma_table_dynamic[0], hdma_table_dynamic[223]);
+      g_zenv.ppu->methods.setMode7PerspectiveCorrection(g_zenv.ppu, hdma_table_dynamic[0], hdma_table_dynamic[223]);
     else
-      PpuSetMode7PerspectiveCorrection(g_zenv.ppu, 0, 0);
+      g_zenv.ppu->methods.setMode7PerspectiveCorrection(g_zenv.ppu, 0, 0);
   }
 
-  if (g_zenv.ppu->extraLeftRight != 0 || render_flags & kPpuRenderFlags_Height240)
+  if (g_zenv.ppu->methods.getExtraLeftRight(g_zenv.ppu) != 0 || render_flags & kPpuRenderFlags_Height240)
     ConfigurePpuSideSpace();
 
   int height = render_flags & kPpuRenderFlags_Height240 ? 240 : 224;
@@ -210,7 +210,7 @@ void ZeldaDrawPpuFrame(uint8 *pixel_buffer, size_t pitch, uint32 render_flags) {
         zelda_snes_dummy_write(NMITIMEN, 0x81);
       }
     }
-    ppu_runLine(g_zenv.ppu, i);
+    g_zenv.ppu->methods.runLine(g_zenv.ppu, i);
     SimpleHdma_DoLine(&hdma_chans[0]);
     SimpleHdma_DoLine(&hdma_chans[1]);
   }
@@ -264,14 +264,14 @@ static void ZeldaRunGameLoop() {
 
 void ZeldaInitialize() {
   g_zenv.dma = dma_init(NULL);
-  g_zenv.ppu = ppu_init(NULL);
+  g_zenv.ppu = PpuImpl_alloc();
   g_zenv.ram = g_ram;
   g_zenv.sram = (uint8*)calloc(8192, 1);
-  g_zenv.vram = g_zenv.ppu->vram;
+  g_zenv.vram = *g_zenv.ppu->vram;
   g_zenv.player = SpcPlayer_Create();
   SpcPlayer_Initialize(g_zenv.player);
   dma_reset(g_zenv.dma);
-  ppu_reset(g_zenv.ppu);
+  g_zenv.ppu->methods.reset(g_zenv.ppu);
 }
 
 static void ZeldaRunPolyLoop() {
@@ -369,7 +369,7 @@ static void InternalSaveLoad(SaveLoadFunc *func, void *ctx) {
   dsp_saveload(g_zenv.player->dsp, func, ctx); // 3024 bytes of dsp
   func(ctx, junk, 15); // spc junk
   dma_saveload(g_zenv.dma, func, ctx); // 192 bytes of dma state
-  ppu_saveload(g_zenv.ppu, func, ctx); // 66619 + 512 + 174
+  g_zenv.ppu->methods.saveLoad(g_zenv.ppu, func, ctx); // 66619 + 512 + 174
   func(ctx, g_zenv.sram, 0x2000);  // 8192 bytes of sram
   func(ctx, junk, 58); // snes junk
   func(ctx, g_zenv.ram, 0x20000);  // 0x20000 bytes of ram
@@ -379,7 +379,7 @@ static void InternalSaveLoad(SaveLoadFunc *func, void *ctx) {
 void ZeldaReset(bool preserve_sram) {
   frame_ctr_dbg = 0;
   dma_reset(g_zenv.dma);
-  ppu_reset(g_zenv.ppu);
+  g_zenv.ppu->methods.reset(g_zenv.ppu);
   memset(g_zenv.ram, 0, 0x20000);
   if (!preserve_sram)
     memset(g_zenv.sram, 0, 0x2000);

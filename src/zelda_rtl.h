@@ -10,6 +10,7 @@
 
 #include "types.h"
 #include "features.h"
+#include "ppu_lib/ppu_interface.h"
 
 struct Snes;
 struct Dsp;
@@ -18,7 +19,7 @@ typedef struct ZeldaEnv {
   uint8 *ram;
   uint8 *sram;
   uint16 *vram;
-  struct Ppu *ppu;
+  PpuImpl *ppu;
   struct SpcPlayer *player;
   struct Dma *dma;
   

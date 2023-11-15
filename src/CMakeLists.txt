@@ -1,4 +1,3 @@
-
 add_executable(
   zelda3
   ancilla.c
@@ -32,7 +31,12 @@ add_executable(
 
 target_include_directories(zelda3 PRIVATE ${PROJECT_SOURCE_DIR})
 
-target_link_libraries(zelda3 PRIVATE zelda3::snes zelda3::gl_core zelda3::opus)
+target_link_libraries(
+  zelda3
+  PRIVATE zelda3::snes
+          zelda3::gl_core
+          zelda3::opus
+          zelda3::ppu_lib)
 
 # SDL2::SDL2main may or may not be available. It is e.g. required by Windows GUI applications
 if(TARGET SDL2::SDL2main)
