@@ -1,0 +1,87 @@
+// Example IDL file for our monster's schema.
+ 
+namespace PPUCommand;
+
+table Reset {}
+
+struct RunLine {
+    line: int32;
+}
+
+struct Read {
+    addr: uint8;
+    result: uint8;
+}
+
+struct Write {
+    adr: uint8;
+    value: uint8;
+}
+
+table WriteCGRam {
+    data: [uint8];
+}
+
+table WriteOAM {
+    data: [uint8];
+}
+
+table BeginDrawing {
+    buffer_size: int32;
+    pitch: int32;
+    render_flags: uint32;
+}
+
+struct GetCurrentRenderScale {
+    render_flags: uint32;
+    result: int32;
+}
+
+struct SetMode7PerspectiveCorrection {
+    low: int32;
+    high: int32;
+}
+
+struct SetExtraSideSpace {
+    left: int32;
+    right: int32;
+    bottom: int32;
+}
+
+struct GetMode {
+    result: uint8;
+}
+
+struct GetExtraLeftRight {
+    result: uint8;
+}
+
+struct SetExtraLeftRight {
+    extra_left_right: uint8;
+} 
+
+union CommandType {
+    Reset,
+    RunLine,
+    Read, 
+    Write,
+    WriteCGRam,
+    WriteOAM,
+    BeginDrawing,
+    GetCurrentRenderScale,
+    SetMode7PerspectiveCorrection,
+    SetExtraSideSpace,
+    GetMode,
+    GetExtraLeftRight,
+    SetExtraLeftRight
+}
+
+table Command {
+    command: CommandType;
+}
+
+table CommandList {
+    commands: [Command];
+}
+ 
+root_type CommandList;
