@@ -17,14 +17,19 @@ add_dependencies(PPUFBSchemas fbschemas)
 
 add_library(
   ppu_lib STATIC
+  DebugPPU.hpp
   ppu_interface.h
   ppu_interface.cpp
+  PPMWriter.hpp
+  PPMWriter.cpp
   PPUBase.hpp
   PPUBase.cpp
   PPURecorder.hpp
   PPURecorder.cpp
   SNESPPU.hpp
-  SNESPPU.cpp)
+  SNESPPU.cpp
+  PPUFixedFrameRecorder.hpp
+  PPUFixedFrameRecorder.cpp)
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 

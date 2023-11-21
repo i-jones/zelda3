@@ -1,10 +1,11 @@
 #include "PPURecorder.hpp"
 
-#include "PPUCommands_generated.h"
+static_assert(FLATBUFFERS_LITTLEENDIAN);
 
 PPURecorder::PPURecorder(std::unique_ptr<PPUBase> ppu)
-    : _ppu(std::move(ppu))
+    : _ppu(std::move(ppu)), _recording(std::make_unique<Recording>())
 {
+    vram = _ppu->vram;
 }
 
 PPURecorder::~PPURecorder() = default;
@@ -56,7 +57,7 @@ void PPURecorder::writeOam(const void *data, size_t size)
 
     const uint8_t *oamData = reinterpret_cast<const uint8_t *>(data);
     auto recordData = _recording->builder().CreateVector(oamData, size);
-    auto writeOam = PPUCommand::CreateWriteCGRam(_recording->builder(), recordData);
+    auto writeOam = PPUCommand::CreateWriteOAM(_recording->builder(), recordData);
     _recording->addCommand(writeOam);
 }
 
@@ -69,7 +70,8 @@ void PPURecorder::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_fl
 {
     _ppu->beginDrawing(buffer, pitch, render_flags);
 
-    auto beginDrawing = PPUCommand::CreateBeginDrawing(_recording->builder());
+    auto vramData = _recording->builder().CreateVector(reinterpret_cast<uint8_t *>(vram), sizeof(PpuVRam));
+    auto beginDrawing = PPUCommand::CreateBeginDrawing(_recording->builder(), 0, 0, render_flags, vramData);
     _recording->addCommand(beginDrawing);
 }
 

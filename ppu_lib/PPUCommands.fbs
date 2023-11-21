@@ -30,6 +30,7 @@ table BeginDrawing {
     buffer_size: int32;
     pitch: int32;
     render_flags: uint32;
+    vram: [uint8];
 }
 
 struct GetCurrentRenderScale {

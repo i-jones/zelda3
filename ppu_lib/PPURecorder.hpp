@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 
 #include "PPUBase.hpp"
 
@@ -15,11 +16,21 @@ public:
     template <typename T>
     void addCommand(flatbuffers::Offset<T> offset)
     {
-        flatbuffers::Offset<PPUCommand::Command> cmd = PPUCommand::CreateCommand(_builder, PPUCommand::CommandTypeTraits<T>::enum_value, offset.Union());
+        using CommandType = std::remove_const_t<std::remove_pointer_t<T>>;
+        auto cmdType = PPUCommand::CommandTypeTraits<CommandType>::enum_value;
+        if (cmdType == PPUCommand::CommandType_NONE)
+        {
+            throw std::runtime_error("Invalid command type");
+        }
+
+        flatbuffers::Offset<PPUCommand::Command> cmd = PPUCommand::CreateCommand(_builder, cmdType, offset.Union());
+
         _cmds.push_back(std::move(cmd));
     }
 
     flatbuffers::FlatBufferBuilder &builder() { return _builder; }
+
+    std::span<uint8_t> finish();
 
 private:
     flatbuffers::FlatBufferBuilder _builder;
@@ -47,6 +58,8 @@ public:
     uint8_t getExtraLeftRight() override;
     void setExtraLeftRight(uint8_t extraLeftRight) override;
     Ppu *getPpu() override;
+
+    Recording &recording() { return *_recording; }
 
 private:
     std::unique_ptr<PPUBase> _ppu;

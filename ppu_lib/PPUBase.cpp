@@ -2,102 +2,102 @@
 
 namespace
 {
-    PPUBase *toBase(PpuImpl *impl)
+    PPUBase *toBase(PpuImpl *impl) noexcept
     {
         return static_cast<PPUBase *>(impl);
     }
 
-    void PPUBase_free(PpuImpl *impl)
+    void PPUBase_free(PpuImpl *impl) noexcept
     {
         PPUBase *base = toBase(impl);
         delete base;
     }
 
-    void PPUBase_reset(PpuImpl *impl)
+    void PPUBase_reset(PpuImpl *impl) noexcept
     {
         PPUBase *base = toBase(impl);
         base->reset();
     }
 
-    void PPUBase_runLine(PpuImpl *impl, int line)
+    void PPUBase_runLine(PpuImpl *impl, int line) noexcept
     {
         PPUBase *base = toBase(impl);
         base->runLine(line);
     }
 
-    uint8_t PPUBase_read(PpuImpl *impl, uint8_t adr)
+    uint8_t PPUBase_read(PpuImpl *impl, uint8_t adr) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->read(adr);
     }
 
-    void PPUBase_write(PpuImpl *impl, uint8_t adr, uint8_t val)
+    void PPUBase_write(PpuImpl *impl, uint8_t adr, uint8_t val) noexcept
     {
         PPUBase *base = toBase(impl);
         base->write(adr, val);
     }
 
-    void PPUBase_write_cgram(PpuImpl *impl, const void *src, size_t length)
+    void PPUBase_write_cgram(PpuImpl *impl, const void *src, size_t length) noexcept
     {
         PPUBase *base = toBase(impl);
         base->writeCGRam(src, length);
     }
 
-    void PPUBase_write_oam(PpuImpl *impl, const void *src, size_t length)
+    void PPUBase_write_oam(PpuImpl *impl, const void *src, size_t length) noexcept
     {
         PPUBase *base = toBase(impl);
         base->writeOam(src, length);
     }
 
-    void PPUBase_saveLoad(PpuImpl *impl, PpuSaveLoadFunc *func, void *ctx)
+    void PPUBase_saveLoad(PpuImpl *impl, PpuSaveLoadFunc *func, void *ctx) noexcept
     {
         PPUBase *base = toBase(impl);
         base->saveLoad(func, ctx);
     }
 
-    void PPUBase_BeginDrawing(PpuImpl *impl, uint8_t *buffer, size_t pitch, uint32_t render_flags)
+    void PPUBase_BeginDrawing(PpuImpl *impl, uint8_t *buffer, size_t pitch, uint32_t render_flags) noexcept
     {
         PPUBase *base = toBase(impl);
         base->beginDrawing(buffer, pitch, render_flags);
     }
 
-    int PPUBase_GetCurrentRenderScale(PpuImpl *impl, uint32_t render_flags)
+    int PPUBase_GetCurrentRenderScale(PpuImpl *impl, uint32_t render_flags) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->getCurrentRenderScale(render_flags);
     }
 
-    void PPUBase_SetMode7PerspectiveCorrection(PpuImpl *impl, int low, int high)
+    void PPUBase_SetMode7PerspectiveCorrection(PpuImpl *impl, int low, int high) noexcept
     {
         PPUBase *base = toBase(impl);
         base->setMode7PerspectiveCorrection(low, high);
     }
 
-    void PPUBase_SetExtraSideSpace(PpuImpl *impl, int left, int right, int bottom)
+    void PPUBase_SetExtraSideSpace(PpuImpl *impl, int left, int right, int bottom) noexcept
     {
         PPUBase *base = toBase(impl);
         base->setExtraSideSpace(left, right, bottom);
     }
 
-    uint8_t PPUBase_GetMode(PpuImpl *impl)
+    uint8_t PPUBase_GetMode(PpuImpl *impl) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->getMode();
     }
 
-    uint8_t PPUBase_GetExtraLeftRight(PpuImpl *impl)
+    uint8_t PPUBase_GetExtraLeftRight(PpuImpl *impl) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->getExtraLeftRight();
     }
 
-    void PPUBase_SetExtraLeftRight(PpuImpl *impl, uint8_t extraLeftRight)
+    void PPUBase_SetExtraLeftRight(PpuImpl *impl, uint8_t extraLeftRight) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->setExtraLeftRight(extraLeftRight);
     }
 
-    Ppu *PPUBase_getPpu(PpuImpl *impl)
+    Ppu *PPUBase_getPpu(PpuImpl *impl) noexcept
     {
         PPUBase *base = toBase(impl);
         return base->getPpu();
