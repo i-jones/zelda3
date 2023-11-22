@@ -22,6 +22,14 @@ void PPURecorder::runLine(int line)
 {
     _ppu->runLine(line);
     _recording->addCommand(_recording->builder().CreateStruct(PPUCommand::RunLine(line)));
+
+    if (line == 224 && _drawBuffer)
+    {
+        size_t drawBufferSize = 224 * 256 * 4;
+        auto imageData = _recording->builder().CreateVector(_drawBuffer, drawBufferSize);
+        auto validateImage = PPUCommand::CreateValidateImage(_recording->builder(), imageData);
+        _recording->addCommand(validateImage);
+    }
 }
 
 uint8_t PPURecorder::read(uint8_t adr)
@@ -69,6 +77,7 @@ void PPURecorder::saveLoad(PpuSaveLoadFunc *func, void *context)
 void PPURecorder::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags)
 {
     _ppu->beginDrawing(buffer, pitch, render_flags);
+    _drawBuffer = buffer;
 
     auto vramData = _recording->builder().CreateVector(reinterpret_cast<uint8_t *>(vram), sizeof(PpuVRam));
     auto beginDrawing = PPUCommand::CreateBeginDrawing(_recording->builder(), 0, 0, render_flags, vramData);

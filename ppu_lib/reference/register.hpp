@@ -64,13 +64,14 @@ enum class ObjType
 #pragma pack(push, 1)
 struct ObjSel : public Write<ObjSel>
 {
-    /* OBJECT BASE ADDRESS (UPPER З BIT)
+    /*
+      OBJECT BASE ADDRESS (UPPER З BIT)
       Designate the segment (8K-word/ segment) address which the OBJ data is stored in the VRAM.
       (See pages A-1 and A-2)
     */
     unsigned int nameBaseAddr : 3;
     /*
-    BJECT DATA AREASELECT
+    OBJECT DATA AREASELECT
     The upper 4K-word out of the area (8K-word) desianated by "ObjectBase Address" is assigned as
     the Base Area, and the area of the lower 4K-wordcombined with its Base Area can be selected.
     (See pages A-1 and A-2)

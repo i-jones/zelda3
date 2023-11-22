@@ -1,15 +1,24 @@
 #include <iostream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+#include <gtest/gtest.h>
 
 #include "CLI/CLI.hpp"
-
-// #include "PPUCommands_generated.h"
 
 #include "ppu_lib/generated/PPUCommands_generated.h"
 #include "ppu_lib/DebugPPU.hpp"
 #include "ppu_lib/SNESPPU.hpp"
+#include "ppu_lib/reference/ppu.hpp"
+#include "ppu_lib/utils.hpp"
 
 namespace
 {
+
+    std::string inputFile;
+    std::string ppuType;
+
     template <typename T>
     void validate(T expected, T actual)
     {
@@ -37,7 +46,7 @@ namespace
         {
             auto read = cmd->command_as_Read();
             auto result = ppu.read(read->addr());
-            validate(read->result(), result);
+            ASSERT_EQ(read->result(), result) << "Read " << read->addr();
             break;
         }
         case PPUCommand::CommandType_Write:
@@ -70,7 +79,7 @@ namespace
         {
             auto getCurrentRenderScale = cmd->command_as_GetCurrentRenderScale();
             auto result = ppu.getCurrentRenderScale(getCurrentRenderScale->render_flags());
-            validate(getCurrentRenderScale->result(), result);
+            ASSERT_EQ(getCurrentRenderScale->result(), result) << "GetCurrentRenderScale";
             break;
         }
         case PPUCommand::CommandType_SetMode7PerspectiveCorrection:
@@ -89,20 +98,48 @@ namespace
         {
             auto getMode = cmd->command_as_GetMode();
             auto result = ppu.getMode();
-            validate(getMode->result(), result);
+            ASSERT_EQ(getMode->result(), result) << "GetMode";
             break;
         }
         case PPUCommand::CommandType_GetExtraLeftRight:
         {
             auto getExtraLeftRight = cmd->command_as_GetExtraLeftRight();
             auto result = ppu.getExtraLeftRight();
-            validate(getExtraLeftRight->result(), result);
+            ASSERT_EQ(getExtraLeftRight->result(), result) << "GetExtraLeftRight";
             break;
         }
         case PPUCommand::CommandType_SetExtraLeftRight:
         {
             auto setExtraLeftRight = cmd->command_as_SetExtraLeftRight();
             ppu.setExtraLeftRight(setExtraLeftRight->extra_left_right());
+            break;
+        }
+        case PPUCommand::CommandType_ValidateImage:
+        {
+            auto validateImage = cmd->command_as_ValidateImage();
+
+            std::span<const uint8_t> reference(validateImage->image()->data(), validateImage->image()->size());
+            std::span<const uint8_t> current(renderBuffer, 256 * 224 * 4);
+            bool imagesEqual = Utils::areImagesEqual(reference, current);
+            if (!imagesEqual)
+            {
+                // Write the image out
+                std::cerr << "Current path is " << fs::current_path() << '\n';
+                std::string inputStem = fs::path(inputFile).stem();
+                {
+
+                    std::ofstream ostrm("reference-" + inputStem + "-" + ppuType + ".ppm");
+                    PPMwriter::writePPMImage(ostrm, reference.data(), 256 * 4, std::nullopt);
+                    ostrm.close();
+                }
+                {
+
+                    std::ofstream ostrm("test-" + inputStem + "-" + ppuType + ".ppm");
+                    PPMwriter::writePPMImage(ostrm, current.data(), 256 * 4, std::nullopt);
+                    ostrm.close();
+                }
+            }
+            ASSERT_TRUE(imagesEqual) << "Image differ";
             break;
         }
         default:
@@ -115,31 +152,44 @@ namespace
     void runReplay(const PPUCommand::CommandList *cmds, PPUBase &ppu, bool validate)
     {
         // Setup render buffer
-        std::array<std::byte, 256 * 224 * 4> renderBuffer;
+        std::array<std::byte, 256 * 224 * 4> renderBuffer{};
 
         auto *cmdVec = cmds->commands();
         std::cerr << "Number of commands: " << cmdVec->size() << "\n";
+
         for (auto cmd : *cmdVec)
         {
-            std::cerr << "Command Type:  " << PPUCommand::EnumNameCommandType(cmd->command_type()) << "\n";
-        }
-        for (auto cmd : *cmdVec)
-        {
-            executeCmd(cmd, ppu, reinterpret_cast<uint8_t *>(renderBuffer.data()), 256 * 4);
+            ASSERT_NO_FATAL_FAILURE(executeCmd(cmd, ppu, reinterpret_cast<uint8_t *>(renderBuffer.data()), 256 * 4));
         }
     }
 }
 
 int main(int argc, char *argv[])
 {
+    testing::InitGoogleTest(&argc, argv);
     CLI::App app;
 
-    std::string inputFile;
-
     app.add_option("-f", inputFile, "file to replay")->required();
+    app.add_option("-p", ppuType, "ppu impl")->default_val("snes")->required();
 
     CLI11_PARSE(app, argc, argv);
-    std::cout << "Replaying: " << inputFile << " \n";
+
+    return RUN_ALL_TESTS();
+}
+
+TEST(PPUReplay, Replay)
+{
+    std::unique_ptr<PPUBase> ppu;
+    if (ppuType == "snes")
+    {
+        ppu = std::make_unique<DebugPPU<SNESPPU>>();
+    }
+    else if (ppuType == "reference")
+    {
+        ppu = std::make_unique<DebugPPU<ReferencePPU>>();
+    }
+    ASSERT_NE(ppu, nullptr) << "Invalid ppu";
+    std::cout << "Replaying: " << inputFile << " with ppu " << ppuType << "\n";
 
     // Load the recording
     std::ifstream input(inputFile, std::ios::binary);
@@ -149,18 +199,10 @@ int main(int argc, char *argv[])
     input.close();
 
     flatbuffers::Verifier verifier(buffer.data(), buffer.size());
-    if (!PPUCommand::VerifyCommandListBuffer(verifier))
-    {
-        std::cerr << "Invalid ppu file";
-        std::exit(1);
-    }
+    ASSERT_TRUE(PPUCommand::VerifyCommandListBuffer(verifier)) << "Invalid ppu recording";
 
     auto commandList = PPUCommand::GetCommandList(buffer.data());
 
-    DebugPPU<SNESPPU> ppu;
-
     // Execute
-    runReplay(commandList, ppu, true);
-
-    return 0;
+    ASSERT_NO_FATAL_FAILURE(runReplay(commandList, *ppu, true));
 }

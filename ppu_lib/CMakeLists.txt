@@ -28,6 +28,10 @@ add_library(
   SNESPPU.cpp
   PPUFixedFrameRecorder.hpp
   PPUFixedFrameRecorder.cpp
+  utils.hpp
+  utils.cpp
+  reference/ppu.hpp
+  reference/ppu.cpp
   reference/register.hpp
   reference/register.cpp)
 

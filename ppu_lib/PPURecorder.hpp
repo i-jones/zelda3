@@ -64,4 +64,5 @@ public:
 private:
     std::unique_ptr<PPUBase> _ppu;
     std::unique_ptr<Recording> _recording;
+    uint8_t *_drawBuffer = nullptr;
 };
