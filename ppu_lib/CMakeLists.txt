@@ -1,5 +1,3 @@
-include(FindProtobuf)
-
 find_package(flatbuffers REQUIRED)
 
 set(FB_SCHEMA "${CMAKE_CURRENT_SOURCE_DIR}/PPUCommands.fbs")
@@ -29,7 +27,9 @@ add_library(
   SNESPPU.hpp
   SNESPPU.cpp
   PPUFixedFrameRecorder.hpp
-  PPUFixedFrameRecorder.cpp)
+  PPUFixedFrameRecorder.cpp
+  reference/register.hpp
+  reference/register.cpp)
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 
@@ -37,3 +37,9 @@ target_link_libraries(ppu_lib PUBLIC zelda3::snes)
 target_link_libraries(ppu_lib PRIVATE PPUFBSchemas)
 
 add_library(zelda3::ppu_lib ALIAS ppu_lib)
+
+add_executable(register_tests tests/register_tests.cpp)
+target_link_libraries(register_tests GTest::gtest_main ppu_lib)
+
+include(GoogleTest)
+gtest_discover_tests(register_tests)

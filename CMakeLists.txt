@@ -18,6 +18,13 @@ find_package(
 # 1. Look for a SDL2 package, 2. Look for the SDL2maincomponent and 3. DO NOT fail when SDL2main is not available
 find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 
+include(FetchContent)
+FetchContent_Declare(googletest
+                     URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
+
+FetchContent_MakeAvailable(googletest)
+enable_testing()
+
 add_subdirectory(snes)
 add_subdirectory(third_party)
 add_subdirectory(ppu_lib)
