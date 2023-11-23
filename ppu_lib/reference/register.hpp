@@ -4,6 +4,11 @@
 #include <cstdint>
 #include <type_traits>
 
+constexpr uint8_t RegisterIndex(uint16_t snesAddr)
+{
+    return snesAddr - 0x2100;
+}
+
 enum class ForcedBlanking : unsigned char
 {
     NonBlanking = 0,
@@ -212,13 +217,34 @@ struct BgScreenSizes
 {
     BGSC bg[4];
 };
+/*
+ADDRESS: 210BH/210CH
+NAME: BG12NBA / BG34NBA
+CONTENTS: BG CHARACTER DATA AREA DESIGNATION
+*/
+#pragma pack(push, 1)
+struct BGCharacterDataArea : public Write<BGCharacterDataArea>
+{
+    unsigned int baseAddr0 : 4;
+    unsigned int baseAddr1 : 4;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(BGCharacterDataArea);
+
+struct BGNameAddresses
+{
+    BGCharacterDataArea bg12;
+    BGCharacterDataArea bg34;
+
+    // TODO add convenience accessors
+};
 
 /*
 ADDRESS: 210DH / 210EH
 NAME: BG1HOFS / BG1VOFS
 CONTENTS: H/V SCROLL VALUE DESIGNATION FOR BG-1
 */
-class BG1OffsetRegiser
+class BG1OffsetRegister
 {
 public:
     void reset()
@@ -250,12 +276,18 @@ private:
     unsigned int _writeIndex = 0;
 };
 
+struct BG1Offsets
+{
+    BG1OffsetRegister hOffset;
+    BG1OffsetRegister vOffset;
+};
+
 /*
 ADDRESS: 210FH /2110 H/2111 H/2112 H/2113 H/2114 H
 NAME: BG2H0FS / BG2VOFS / BG3HOFS /BG3VOFS / BG4H0FS / BG4VOFS
 CONTENTS: H / SCROLL VALUE DESIGNATION FOR BG-2, 3, 4
 */
-class BGOffsetRegiser
+class BGOffsetRegister
 {
 public:
     void reset()
@@ -280,6 +312,17 @@ private:
         unsigned int _offset : 10;
     };
     unsigned int _writeIndex = 0;
+};
+
+struct BGOffsets
+{
+    BGOffsetRegister hOffset;
+    BGOffsetRegister vOffset;
+};
+
+struct BGsOffsets
+{
+    BGOffsets bg[3];
 };
 
 /*
@@ -318,3 +361,205 @@ struct M7Sel : public Write<M7Sel>
 };
 #pragma pack(pop)
 REGISTER_CONSTRAINT(M7Sel);
+
+/*
+ADDRESS: 2123H / 2124H / 2125H
+NAME: W12SEL/ W34SEL WOBJSEL
+CONTENTS: WINDOW MASK SETTINGS (BG1~BG4, OBJ, COLOR)
+*/
+
+enum class WindowInOut : unsigned char
+{
+    In = 0,
+    Out = 1,
+};
+
+enum class WindowEnabled : unsigned char
+{
+    Off = 0,
+    On = 1,
+};
+
+#pragma pack(push, 1)
+struct WindowMaskSettings : public Write<WindowMaskSettings>
+{
+    WindowInOut bg1InOut1 : 1;
+    WindowEnabled bg1Enable1 : 1;
+    WindowInOut bg1InOut2 : 1;
+    WindowEnabled bg1Enable2 : 1;
+    WindowInOut bg2InOut1 : 1;
+    WindowEnabled bg2Enable1 : 1;
+    WindowInOut bg2InOut2 : 1;
+    WindowEnabled bg2Enable2 : 1;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(WindowMaskSettings);
+
+struct WindowSettings
+{
+    WindowMaskSettings windowBg12;
+    WindowMaskSettings windowBg34;
+    WindowMaskSettings windowObjColor;
+};
+
+/*
+ADDRESS: 212AH/ 212BH
+NAME: WBGLOG/ WOBJLOGI
+CONTENTS: MASK LOGIC SETTINGS FOR WINDOW-1 & 2 ON EACH SCREEN
+*/
+
+enum class WindowLogic : unsigned char
+{
+    OR = 0,
+    AND = 1,
+    XOR = 2,
+    XNOR = 3,
+};
+
+#pragma pack(push, 1)
+struct WindowBGLogic : public Write<WindowBGLogic>
+{
+    WindowLogic bg1 : 2;
+    WindowLogic bg2 : 2;
+    WindowLogic bg3 : 2;
+    WindowLogic bg4 : 2;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(WindowBGLogic);
+
+#pragma pack(push, 1)
+struct WindowObjectLogic : public Write<WindowObjectLogic>
+{
+    WindowLogic obj : 2;
+    WindowLogic color : 2;
+    unsigned int _reserved : 4;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(WindowObjectLogic);
+
+enum class LayerFlag : bool
+{
+    Disable = 0,
+    Enable = 1
+};
+
+#pragma pack(push, 1)
+struct LayerFlags : public Write<LayerFlags>
+{
+    LayerFlag bg1 : 1;
+    LayerFlag bg2 : 1;
+    LayerFlag bg3 : 1;
+    LayerFlag bg4 : 1;
+    LayerFlag obj : 1;
+    unsigned int _reserved : 3;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(LayerFlags);
+
+/*
+ADDRESS: 2130H
+NAME: CGSWSEL
+CONTENTS: INITIAL SETTINGS FOR FIXEDC O L O R ADDITION OR SCREEN ADDITION
+*/
+
+enum class ColorWindowFunction : unsigned char
+{
+    On = 0,
+    InsideWindow = 1,
+    OutsideWindow = 2,
+    Off = 3
+};
+
+#pragma pack(push, 1)
+struct ColorWindowSelect : public Write<ColorWindowSelect>
+{
+    bool directSelect : 1;
+    bool ccAddEnable : 1;
+    unsigned int _reserved : 2;
+    ColorWindowFunction sub : 2;
+    ColorWindowFunction main : 2;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(ColorWindowSelect);
+
+/*
+ADDRESS: 2131H
+NAME: CGADSUB
+CONTENTS: ADDITION/SUBTRACTION & SUBTRACTION DESIGNATION FOR EACH BG SCREEN OBJ & BACKGROUND COLOR
+*/
+
+enum class ColorMode : unsigned char
+{
+    Addition = 0,
+    Subtraction = 1
+};
+
+#pragma pack(push, 1)
+struct ColorAddSub : public Write<ColorAddSub>
+{
+    bool bg1 : 1;
+    bool bg2 : 1;
+    bool bg3 : 1;
+    bool bg4 : 1;
+    bool obj : 1;
+    bool back : 1;
+    bool halfEnable : 1;
+    ColorMode addSub : 1;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(ColorAddSub);
+
+// TODO these should be 5-bit colors
+struct Color
+{
+    unsigned int r;
+    unsigned int g;
+    unsigned int b;
+};
+
+/*
+ADDRESS: 2132H
+NAME: COLDATA
+CONTENTS: FIXED COLOR DATA FOR FIXED COLOR ADDITION/SUBTRACTION
+*/
+#pragma pack(push, 1)
+struct ColorData : public Write<ColorData>
+{
+    unsigned int colorBrillianceData : 5;
+    bool red : 1;
+    bool green : 1;
+    bool blue : 1;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(ColorData);
+
+/*
+ADDRESS: 2133H
+NAME: SETINI
+CONTENTS: SCREEN INITIALSETTING
+*/
+
+enum class InterlaceMode : unsigned char
+{
+    NonInterlace = 0,
+    ScanningInterlace = 1,
+};
+
+enum class VDisplay : unsigned char
+{
+    Display224 = 0,
+    Display239 = 1,
+};
+
+#pragma pack(push, 1)
+struct ScreenInitSettings : public Write<ScreenInitSettings>
+{
+    InterlaceMode interlace : 1;
+    bool objVSelect : 1;
+    VDisplay bgVSelect : 1;
+    unsigned int _reserved : 2;
+    bool extBGMode : 1;
+    bool externalSynch : 1;
+};
+#pragma pack(pop)
+REGISTER_CONSTRAINT(ScreenInitSettings);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../PPUBase.hpp"
+#include "register.hpp"
 
 class ReferencePPU : public PPUBase
 {
@@ -23,5 +24,48 @@ public:
     Ppu *getPpu() override;
 
 private:
+    void initBus();
+
     PpuVRam vramMem;
+
+    IniDisp iniDisp;
+    ObjSel objSel;
+    OamAddL oamAddL;
+    OamAddH oamAddH;
+    BgModeReg bgModeReg;
+    Mosaic mosaic;
+    BgScreenSizes bgScreens;
+    BGNameAddresses bgNameAddresses;
+    BG1Offsets bg1Offsets;
+    BGsOffsets bgOffsets;
+    M7Sel mode7Select;
+
+    uint8_t cgRamAddress;
+
+    WindowSettings windowSettings;
+    WindowBGLogic windowBGLogic;
+    WindowObjectLogic windowObjectLogic;
+
+    LayerFlags enableMainScreen;
+    LayerFlags enableSubScreen;
+    LayerFlags enableMainScreenWindow;
+    LayerFlags enableSubScreenWindow;
+
+    struct WindowPositions
+    {
+        uint8_t left;
+        uint8_t right;
+    };
+    WindowPositions windowPositions[2];
+
+    ColorWindowSelect colorWindowSelect;
+    ColorAddSub colorAddSub;
+
+    Color fixedColor;
+
+    ScreenInitSettings screenInitSettings;
+
+    using WriteFunc = std::function<void(uint8_t)>;
+    using WriteBus = std::array<WriteFunc, 0x2133 - 0x2100 + 1>;
+    WriteBus writeBus;
 };

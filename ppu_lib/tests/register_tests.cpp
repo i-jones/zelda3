@@ -87,7 +87,7 @@ TEST(Registers, Mosaic)
 
 TEST(Registers, Offset)
 {
-    BGOffsetRegiser r{};
+    BGOffsetRegister r{};
 
     r.reset();
     r.write(0xff);
@@ -102,7 +102,7 @@ TEST(Registers, Offset)
 
 TEST(Registers, BG1Offset)
 {
-    BG1OffsetRegiser r{};
+    BG1OffsetRegister r{};
 
     r.reset();
     r.write(0xff);
