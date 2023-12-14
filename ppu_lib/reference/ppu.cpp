@@ -7,9 +7,22 @@ ReferencePPU::ReferencePPU()
     vram = &vramMem;
     initBus();
 }
-void ReferencePPU::reset() {}
+void ReferencePPU::reset()
+{
+    objSel.nameBaseAddr = 2;
+    objSel.nameSelect = 0;
+}
 
-void ReferencePPU::runLine(int line) {}
+void ReferencePPU::runLine(int line)
+{
+    for (int x = 0; x < ScreenWidth; x++)
+    {
+        Pixel p(x, line);
+        OutputPixelFormat c = computePixel(p);
+        // Write color to output buffer
+        renderBuffer->writePixel(p, c);
+    }
+}
 uint8_t ReferencePPU::read(uint8_t adr)
 {
     return 0;
@@ -23,9 +36,16 @@ void ReferencePPU::write(uint8_t adr, uint8_t val)
     writeBus[adr](val);
 }
 void ReferencePPU::writeCGRam(const void *data, size_t size) {}
-void ReferencePPU::writeOam(const void *data, size_t size) {}
+void ReferencePPU::writeOam(const void *data, size_t size)
+{
+    assert(size == sizeof(OAM));
+    memcpy(&oam, data, size);
+}
 void ReferencePPU::saveLoad(PpuSaveLoadFunc *func, void *context) {}
-void ReferencePPU::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags) {}
+void ReferencePPU::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags)
+{
+    renderBuffer = RenderBuffer(256, 225, buffer, pitch);
+}
 int ReferencePPU::getCurrentRenderScale(uint32_t render_flags)
 {
     return 1;
@@ -54,8 +74,6 @@ void ReferencePPU::initBus()
             std::cerr << "Write to " << std::hex << (i + 0x2100) << " not implemented!\n";
         };
     }
-    // auto nullOpt = [](uint8_t) {};
-    // std::fill(writeBus.begin(), writeBus.end(), nullOpt);
 
     writeBus[RegisterIndex(0x2100)] = [this](uint8_t data)
     {
@@ -209,19 +227,33 @@ void ReferencePPU::initBus()
         coldata.write(data);
         if (coldata.red)
         {
-            this->fixedColor.r = coldata.colorBrillianceData;
+            this->fixedColor.r() = coldata.colorBrillianceData;
         }
         if (coldata.green)
         {
-            this->fixedColor.g = coldata.colorBrillianceData;
+            this->fixedColor.g() = coldata.colorBrillianceData;
         }
         if (coldata.blue)
         {
-            this->fixedColor.b = coldata.colorBrillianceData;
+            this->fixedColor.b() = coldata.colorBrillianceData;
         }
     };
     writeBus[RegisterIndex(0x2133)] = [this](uint8_t data)
     {
         this->screenInitSettings.write(data);
     };
+}
+
+OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
+{
+    auto objResult = ObjectRender::renderObjects(oam, pixel, objSel, vramView);
+    if (objResult)
+    {
+        return OutputPixelFormat(objResult->color);
+    }
+    return OutputPixelFormat(fixedColor);
+}
+
+void ReferencePPU::computeBackground(Pixel pixel)
+{
 }

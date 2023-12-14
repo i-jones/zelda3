@@ -1,7 +1,18 @@
 #pragma once
 
+#include <optional>
+
 #include "../PPUBase.hpp"
 #include "register.hpp"
+#include "../vec.hpp"
+#include "../color.hpp"
+#include "../RenderBuffer.hpp"
+#include "Objects.hpp"
+#include "VRAM.hpp"
+
+using Pixel = Vec2<int>;
+
+constexpr int ScreenWidth = 256;
 
 class ReferencePPU : public PPUBase
 {
@@ -25,6 +36,9 @@ public:
 
 private:
     void initBus();
+
+    OutputPixelFormat computePixel(Pixel pixel);
+    void computeBackground(Pixel pixel);
 
     PpuVRam vramMem;
 
@@ -68,4 +82,9 @@ private:
     using WriteFunc = std::function<void(uint8_t)>;
     using WriteBus = std::array<WriteFunc, 0x2133 - 0x2100 + 1>;
     WriteBus writeBus;
+
+    OAM oam;
+    VRAM vramView{vramMem};
+
+    std::optional<RenderBuffer> renderBuffer;
 };

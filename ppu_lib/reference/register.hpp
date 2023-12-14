@@ -77,14 +77,14 @@ struct ObjSel : public Write<ObjSel>
     unsigned int nameBaseAddr : 3;
     /*
     OBJECT DATA AREASELECT
-    The upper 4K-word out of the area (8K-word) desianated by "ObjectBase Address" is assigned as
+    The upper 4K-word out of the area (8K-word) designated by "ObjectBase Address" is assigned as
     the Base Area, and the area of the lower 4K-wordcombined with its Base Area can be selected.
     (See pages A-1 and A-2)
     */
     unsigned int nameSelect : 2;
     unsigned int sizeSelect : 3;
 
-    ObjSize getObjectSize(ObjType type)
+    ObjSize getObjectSize(ObjType type) const
     {
         constexpr std::array<ObjSize, 6> smallSizes = {
             ObjSize::Size8, ObjSize::Size8, ObjSize::Size8,
@@ -510,12 +510,14 @@ struct ColorAddSub : public Write<ColorAddSub>
 REGISTER_CONSTRAINT(ColorAddSub);
 
 // TODO these should be 5-bit colors
+/*
 struct Color
 {
     unsigned int r;
     unsigned int g;
     unsigned int b;
 };
+*/
 
 /*
 ADDRESS: 2132H

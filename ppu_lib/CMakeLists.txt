@@ -30,10 +30,17 @@ add_library(
   PPUFixedFrameRecorder.cpp
   utils.hpp
   utils.cpp
+  RenderBuffer.hpp
+  RenderBuffer.cpp
   reference/ppu.hpp
   reference/ppu.cpp
   reference/register.hpp
-  reference/register.cpp)
+  reference/register.cpp
+  vec.hpp
+  color.hpp
+  reference/CharData.hpp
+  reference/Objects.cpp
+  reference/Objects.hpp)
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 
@@ -42,8 +49,8 @@ target_link_libraries(ppu_lib PRIVATE PPUFBSchemas)
 
 add_library(zelda3::ppu_lib ALIAS ppu_lib)
 
-add_executable(register_tests tests/register_tests.cpp)
-target_link_libraries(register_tests GTest::gtest_main ppu_lib)
+add_executable(ppu_lib_tests tests/register_tests.cpp tests/chardata_tests.cpp tests/objects_tests.cpp)
+target_link_libraries(ppu_lib_tests GTest::gtest_main ppu_lib)
 
 include(GoogleTest)
-gtest_discover_tests(register_tests)
+gtest_discover_tests(ppu_lib_tests)

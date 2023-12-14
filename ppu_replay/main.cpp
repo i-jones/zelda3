@@ -52,6 +52,7 @@ namespace
         case PPUCommand::CommandType_Write:
         {
             auto write = cmd->command_as_Write();
+            std::cerr << "  Adr " << std::hex << (write->adr() + 0x2100) << "\n";
             ppu.write(write->adr(), write->value());
             break;
         }
@@ -152,7 +153,7 @@ namespace
     void runReplay(const PPUCommand::CommandList *cmds, PPUBase &ppu, bool validate)
     {
         // Setup render buffer
-        std::array<std::byte, 256 * 224 * 4> renderBuffer{};
+        std::array<std::byte, 256 * 225 * 4> renderBuffer{};
 
         auto *cmdVec = cmds->commands();
         std::cerr << "Number of commands: " << cmdVec->size() << "\n";
