@@ -9,6 +9,7 @@
 #include "../RenderBuffer.hpp"
 #include "Objects.hpp"
 #include "VRAM.hpp"
+#include "CGRam.hpp"
 
 using Pixel = Vec2<int>;
 
@@ -85,6 +86,7 @@ private:
 
     OAM oam;
     VRAM vramView{vramMem};
+    CGRam cgRam;
 
     std::optional<RenderBuffer> renderBuffer;
 };

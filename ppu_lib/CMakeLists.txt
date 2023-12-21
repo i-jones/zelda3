@@ -40,7 +40,9 @@ add_library(
   color.hpp
   reference/CharData.hpp
   reference/Objects.cpp
-  reference/Objects.hpp)
+  reference/Objects.hpp
+  reference/CGRam.hpp
+  reference/VRAM.hpp)
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 

@@ -15,10 +15,13 @@ void ReferencePPU::reset()
 
 void ReferencePPU::runLine(int line)
 {
+    if (line == 0)
+        return;
     for (int x = 0; x < ScreenWidth; x++)
     {
-        Pixel p(x, line);
+        Pixel p(x, line - 1);
         OutputPixelFormat c = computePixel(p);
+        c = (c * iniDisp.fade / 15).cast<uint8_t>();
         // Write color to output buffer
         renderBuffer->writePixel(p, c);
     }
@@ -35,7 +38,12 @@ void ReferencePPU::write(uint8_t adr, uint8_t val)
     }
     writeBus[adr](val);
 }
-void ReferencePPU::writeCGRam(const void *data, size_t size) {}
+void ReferencePPU::writeCGRam(const void *data, size_t size)
+{
+    assert(size == 512);
+
+    cgRam.write(std::span<const uint8_t, 512>(reinterpret_cast<const uint8_t *>(data), size));
+}
 void ReferencePPU::writeOam(const void *data, size_t size)
 {
     assert(size == sizeof(OAM));
@@ -44,7 +52,7 @@ void ReferencePPU::writeOam(const void *data, size_t size)
 void ReferencePPU::saveLoad(PpuSaveLoadFunc *func, void *context) {}
 void ReferencePPU::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags)
 {
-    renderBuffer = RenderBuffer(256, 225, buffer, pitch);
+    renderBuffer = RenderBuffer(256, 224, buffer, pitch);
 }
 int ReferencePPU::getCurrentRenderScale(uint32_t render_flags)
 {
@@ -71,7 +79,7 @@ void ReferencePPU::initBus()
         {
             auto snesAdr = i + 0x2100;
 
-            std::cerr << "Write to " << std::hex << (i + 0x2100) << " not implemented!\n";
+            // std::cerr << "Write to " << std::hex << (i + 0x2100) << " not implemented!\n";
         };
     }
 
@@ -246,10 +254,13 @@ void ReferencePPU::initBus()
 
 OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
 {
-    auto objResult = ObjectRender::renderObjects(oam, pixel, objSel, vramView);
-    if (objResult)
+    if (enableMainScreen.obj == LayerFlag::Enable)
     {
-        return OutputPixelFormat(objResult->color);
+        auto objResult = ObjectRender::renderObjects(oam, pixel, objSel, vramView, cgRam);
+        if (objResult)
+        {
+            return OutputPixelFormat(objResult->color);
+        }
     }
     return OutputPixelFormat(fixedColor);
 }

@@ -25,6 +25,7 @@ using Color = TColor<uint8_t>;
 struct OutputPixelFormat : public Vec<uint8_t, 4>
 {
     OutputPixelFormat() = default;
+    OutputPixelFormat(const Vec<uint8_t, 4> &v) : Vec<uint8_t, 4>(v) {}
     OutputPixelFormat(Color c) : Vec({c.b(), c.g(), c.r(), 0}) {}
 
     uint8_t &b() { return this->elem[0]; }

@@ -6,6 +6,7 @@
 #include "../vec.hpp"
 #include "register.hpp"
 #include "VRAM.hpp"
+#include "CGRam.hpp"
 
 #pragma pack(push, 1)
 struct ObjectDataPacked
@@ -136,6 +137,6 @@ public:
         return Vec2<int>(sizeInt, sizeInt);
     }
 
-    static std::optional<Ouput> renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram);
-    static std::optional<Ouput> renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram);
+    static std::optional<Ouput> renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam);
+    static std::optional<Ouput> renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam);
 };

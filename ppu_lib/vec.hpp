@@ -58,7 +58,7 @@ constexpr Vec<decltype(std::declval<T1>() - std::declval<T2>()), N> operator-(co
 }
 
 template <typename T1, typename T2, size_t N>
-constexpr Vec<decltype(std::declval<T1>() * std::declval<T2>()), N> operator-(const Vec<T1, N> &lhs, const T2 &rhs)
+constexpr Vec<decltype(std::declval<T1>() * std::declval<T2>()), N> operator*(const Vec<T1, N> &lhs, const T2 &rhs)
 {
     using ResultType = Vec<decltype(std::declval<T1>() * std::declval<T2>()), N>;
     typename ResultType::StorageType elems;
@@ -70,7 +70,7 @@ constexpr Vec<decltype(std::declval<T1>() * std::declval<T2>()), N> operator-(co
 }
 
 template <typename T1, typename T2, size_t N>
-constexpr Vec<decltype(std::declval<T1>() * std::declval<T2>()), N> operator-(const T1 &lhs, const Vec<T2, N> &rhs)
+constexpr Vec<decltype(std::declval<T1>() * std::declval<T2>()), N> operator*(const T1 &lhs, const Vec<T2, N> &rhs)
 {
     using ResultType = Vec<decltype(std::declval<T1>() * std::declval<T2>()), N>;
     typename ResultType::StorageType elems;

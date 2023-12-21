@@ -4,13 +4,13 @@
 
 #include "CharData.hpp"
 
-std::optional<ObjectRender::Ouput> ObjectRender::renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram)
+std::optional<ObjectRender::Ouput> ObjectRender::renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam)
 {
     using PerObjOutput = std::optional<ObjectRender::Ouput>;
     std::array<std::optional<ObjectRender::Ouput>, OAM::NumObjects> perObjResult;
     for (int i = 0; i < perObjResult.size(); i++)
     {
-        perObjResult[i] = renderObject(oam.get(i), pixel, objectSelect, vram);
+        perObjResult[i] = renderObject(oam.get(i), pixel, objectSelect, vram, cgRam);
     }
 
     auto maxIt = std::max_element(
@@ -35,7 +35,7 @@ std::optional<ObjectRender::Ouput> ObjectRender::renderObjects(const OAM &oam, V
     return *maxIt;
 }
 
-std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram)
+std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam)
 {
     auto localPos = pixel - obj.position;
 
@@ -63,11 +63,11 @@ std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &
     size_t tileColOffset = localPos.x() / 8;
 
     // tile Row and column of upper left 8x8 tile
-    const int tileRow = (obj.name & 0xF0) >> 4;
+    const int tileRow = (obj.name & 0x1F0) >> 4;
     const int tileColumn = obj.name & 0x0F;
     const int tileIndex = ((tileRow + tileRowOffset) << 4) | (tileColumn + tileColOffset);
-    assert(baseAddr == 0x4000);
-    assert((baseAddr + addrOffset) == 0x5000);
+    // assert(baseAddr == 0x4000);
+    // assert((baseAddr + addrOffset) == 0x5000);
     const size_t charAddress = obj.index <= 0xff ? (baseAddr + tileIndex * 16) : (baseAddr + addrOffset + tileIndex * 16);
     const auto &tile = vram.readAs<CharData<4>>(charAddress);
     const auto colorIndex = tile.sample({localPos.x() % 8, localPos.y() % 8});
@@ -77,5 +77,7 @@ std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &
     }
 
     //  lookup color in pallete
-    return ObjectRender::Ouput{Color(255, 255, 255), 100};
+    auto p = cgRam.getObjPallete(obj.color);
+    Color c = p[colorIndex];
+    return ObjectRender::Ouput{c, 100};
 }

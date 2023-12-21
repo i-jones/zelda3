@@ -10,7 +10,8 @@ target_link_libraries(
   GTest::gtest)
 
 set(TestPpuTypes snes reference)
-set(ReplayTests ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1.ppu ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1b.ppu)
+set(ReplayTests ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1.ppu ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1b.ppu
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/frames60.ppu)
 
 foreach(testppu ${TestPpuTypes})
   foreach(test ${ReplayTests})
