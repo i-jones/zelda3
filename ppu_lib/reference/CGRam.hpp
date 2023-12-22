@@ -29,10 +29,15 @@ public:
         {
             assert(idx < N);
             auto c = cgRam[startIndex + idx];
-            return Color(c.red * 255 / 31, c.green * 255 / 31, c.blue * 255 / 31);
+            return Color(_5to8Bit(c.red), _5to8Bit(c.green), _5to8Bit(c.blue));
         }
 
     private:
+        static constexpr uint8_t _5to8Bit(uint8_t x)
+        {
+            // x * 255/31 approximation
+            return (x << 3) | (x >> 2);
+        }
         const CGRam &cgRam;
         size_t startIndex;
     };
