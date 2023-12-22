@@ -1,6 +1,8 @@
 #include "PPUFixedFrameRecorder.hpp"
 
-#include <fstream>
+#include <sstream>
+
+#include "utils.hpp"
 
 std::span<uint8_t> Recording::finish()
 {
@@ -12,14 +14,14 @@ std::span<uint8_t> Recording::finish()
     return std::span<uint8_t>(buff, size);
 }
 
-PPUFixedFrameRecorder::PPUFixedFrameRecorder(std::unique_ptr<PPUBase> ppu, int breakFrame) : PPURecorder(std::move(ppu)), _breakFrame(breakFrame)
+PPUFixedFrameRecorder::PPUFixedFrameRecorder(std::unique_ptr<PPUBase> ppu, int breakFrame, bool sparse) : PPURecorder(std::move(ppu)), _breakFrame(breakFrame), _sparse(sparse)
 {
 }
 
 void PPUFixedFrameRecorder::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags)
 {
-    Parent::beginDrawing(buffer, pitch, render_flags);
     _frameCount++;
+    Parent::beginDrawing(buffer, pitch, render_flags);
 }
 
 void PPUFixedFrameRecorder::runLine(int line)
@@ -36,8 +38,24 @@ void PPUFixedFrameRecorder::writeCommandList()
 {
     auto data = recording().finish();
     {
-        std::ofstream recordingFile("test.ppu", std::ios::binary);
-        recordingFile.write(reinterpret_cast<char *>(data.data()), data.size_bytes());
+        std::stringstream fileName;
+        fileName << "frame" << _breakFrame;
+        if (_sparse)
+        {
+            fileName << "_sparse";
+        }
+        fileName << ".ppu";
+        Utils::writeBinary(fileName.str(), data, CompressionType::Zstd);
     }
     std::exit(1);
+}
+
+bool PPUFixedFrameRecorder::shouldRecordFrameDetails() const
+{
+    return !_sparse || _frameCount >= _breakFrame - 1;
+}
+
+bool PPUFixedFrameRecorder::shouldRecordImage() const
+{
+    return _frameCount == _breakFrame;
 }

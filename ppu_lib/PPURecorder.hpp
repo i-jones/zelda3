@@ -65,4 +65,20 @@ private:
     std::unique_ptr<PPUBase> _ppu;
     std::unique_ptr<Recording> _recording;
     uint8_t *_drawBuffer = nullptr;
+
+    class BufferState
+    {
+    public:
+        bool update(std::span<const uint8_t> data);
+
+    private:
+        std::vector<uint8_t> _data;
+    };
+
+    BufferState oamData;
+    BufferState cgramData;
+    BufferState vramData;
+
+    virtual bool shouldRecordFrameDetails() const;
+    virtual bool shouldRecordImage() const;
 };

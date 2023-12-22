@@ -13,6 +13,9 @@ add_library(PPUFBSchemas INTERFACE)
 target_include_directories(PPUFBSchemas INTERFACE ${FLATBUFFERS_INCLUDE_DIR})
 add_dependencies(PPUFBSchemas fbschemas)
 
+find_package(Boost 1.80 REQUIRED COMPONENTS iostreams)
+message(STATUS "Boost version: ${Boost_VERSION}")
+
 add_library(
   ppu_lib STATIC
   DebugPPU.hpp
@@ -47,7 +50,7 @@ add_library(
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 
 target_link_libraries(ppu_lib PUBLIC zelda3::snes)
-target_link_libraries(ppu_lib PRIVATE PPUFBSchemas)
+target_link_libraries(ppu_lib PRIVATE PPUFBSchemas Boost::iostreams)
 
 add_library(zelda3::ppu_lib ALIAS ppu_lib)
 

@@ -7,14 +7,17 @@ class PPUFixedFrameRecorder : public PPURecorder
     using Parent = PPURecorder;
 
 public:
-    PPUFixedFrameRecorder(std::unique_ptr<PPUBase> ppu, int breakFrame);
+    PPUFixedFrameRecorder(std::unique_ptr<PPUBase> ppu, int breakFrame, bool sparse);
 
     void beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags) override;
     void runLine(int line) override;
 
 private:
+    bool shouldRecordFrameDetails() const override;
+    bool shouldRecordImage() const override;
     void writeCommandList();
 
     int _frameCount = 0;
     int _breakFrame = -1;
+    bool _sparse = false;
 };

@@ -13,8 +13,10 @@ set(TestPpuTypes snes reference)
 set(ReplayTests
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1.ppu
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1b.ppu
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frames60.ppu
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/testSparse.ppu)
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame300.ppu.zstd
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame600.ppu.zstd
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame900.ppu.zstd
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1500.ppu.zstd)
 
 foreach(testppu ${TestPpuTypes})
   foreach(test ${ReplayTests})

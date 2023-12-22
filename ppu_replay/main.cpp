@@ -72,7 +72,10 @@ namespace
         {
             auto beginDrawing = cmd->command_as_BeginDrawing();
             // TODO validate against buffer params?
-            memcpy(ppu.vram, beginDrawing->vram()->data(), beginDrawing->vram()->size());
+            if (beginDrawing->vram())
+            {
+                memcpy(ppu.vram, beginDrawing->vram()->data(), beginDrawing->vram()->size());
+            }
             ppu.beginDrawing(renderBuffer, pitch, beginDrawing->render_flags());
             break;
         }
@@ -192,12 +195,8 @@ TEST(PPUReplay, Replay)
     ASSERT_NE(ppu, nullptr) << "Invalid ppu";
     std::cout << "Replaying: " << inputFile << " with ppu " << ppuType << "\n";
 
-    // Load the recording
-    std::ifstream input(inputFile, std::ios::binary);
-
-    // copies all data into buffer
-    std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(input), {});
-    input.close();
+    // Load the recording data into buffer
+    std::vector<unsigned char> buffer = Utils::loadFile(inputFile);
 
     flatbuffers::Verifier verifier(buffer.data(), buffer.size());
     ASSERT_TRUE(PPUCommand::VerifyCommandListBuffer(verifier)) << "Invalid ppu recording";

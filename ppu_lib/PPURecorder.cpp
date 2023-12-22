@@ -1,5 +1,7 @@
 #include "PPURecorder.hpp"
 
+#include <algorithm>
+
 static_assert(FLATBUFFERS_LITTLEENDIAN);
 
 PPURecorder::PPURecorder(std::unique_ptr<PPUBase> ppu)
@@ -21,9 +23,11 @@ void PPURecorder::reset()
 void PPURecorder::runLine(int line)
 {
     _ppu->runLine(line);
+    if (!shouldRecordImage())
+        return;
     _recording->addCommand(_recording->builder().CreateStruct(PPUCommand::RunLine(line)));
 
-    if (line == 224 && _drawBuffer)
+    if (line == 224 && _drawBuffer && shouldRecordImage())
     {
         size_t drawBufferSize = 224 * 256 * 4;
         auto imageData = _recording->builder().CreateVector(_drawBuffer, drawBufferSize);
@@ -51,22 +55,35 @@ void PPURecorder::write(uint8_t adr, uint8_t val)
 
 void PPURecorder::writeCGRam(const void *data, size_t size)
 {
+
     _ppu->writeCGRam(data, size);
 
+    if (!shouldRecordFrameDetails())
+        return;
+
     const uint8_t *cgData = reinterpret_cast<const uint8_t *>(data);
-    auto recordData = _recording->builder().CreateVector(cgData, size);
-    auto writeCGRam = PPUCommand::CreateWriteCGRam(_recording->builder(), recordData);
-    _recording->addCommand(writeCGRam);
+    if (cgramData.update({cgData, size}))
+    {
+        auto recordData = _recording->builder().CreateVector(cgData, size);
+        auto writeCGRam = PPUCommand::CreateWriteCGRam(_recording->builder(), recordData);
+        _recording->addCommand(writeCGRam);
+    }
 }
 
 void PPURecorder::writeOam(const void *data, size_t size)
 {
     _ppu->writeOam(data, size);
 
+    if (!shouldRecordFrameDetails())
+        return;
+
     const uint8_t *oamData = reinterpret_cast<const uint8_t *>(data);
-    auto recordData = _recording->builder().CreateVector(oamData, size);
-    auto writeOam = PPUCommand::CreateWriteOAM(_recording->builder(), recordData);
-    _recording->addCommand(writeOam);
+    if (this->oamData.update({oamData, size}))
+    {
+        auto recordData = _recording->builder().CreateVector(oamData, size);
+        auto writeOam = PPUCommand::CreateWriteOAM(_recording->builder(), recordData);
+        _recording->addCommand(writeOam);
+    }
 }
 
 void PPURecorder::saveLoad(PpuSaveLoadFunc *func, void *context)
@@ -77,9 +94,15 @@ void PPURecorder::saveLoad(PpuSaveLoadFunc *func, void *context)
 void PPURecorder::beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags)
 {
     _ppu->beginDrawing(buffer, pitch, render_flags);
+    if (!shouldRecordImage())
+        return;
     _drawBuffer = buffer;
 
-    auto vramData = _recording->builder().CreateVector(reinterpret_cast<uint8_t *>(vram), sizeof(PpuVRam));
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> vramData{};
+    if (this->vramData.update({reinterpret_cast<const uint8_t *>(vram), sizeof(PpuVRam)}))
+    {
+        vramData = _recording->builder().CreateVector(reinterpret_cast<uint8_t *>(vram), sizeof(PpuVRam));
+    }
     auto beginDrawing = PPUCommand::CreateBeginDrawing(_recording->builder(), 0, 0, render_flags, vramData);
     _recording->addCommand(beginDrawing);
 }
@@ -134,4 +157,27 @@ void PPURecorder::setExtraLeftRight(uint8_t extraLeftRight)
 Ppu *PPURecorder::getPpu()
 {
     return _ppu->getPpu();
+}
+
+bool PPURecorder::shouldRecordFrameDetails() const
+{
+    return true;
+}
+
+bool PPURecorder::shouldRecordImage() const
+{
+    return true;
+}
+
+bool PPURecorder::BufferState::update(std::span<const uint8_t> data)
+{
+    std::span<const uint8_t> current(_data.data(), _data.size());
+    if (std::equal(current.begin(), current.end(), data.begin(), data.end()))
+    {
+        return false;
+    }
+    _data.resize(data.size());
+    std::copy(data.begin(), data.end(), _data.begin());
+    assert(std::equal(_data.begin(), _data.end(), data.begin(), data.end()));
+    return true;
 }
