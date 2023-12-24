@@ -4,6 +4,28 @@
 #include <cstdint>
 #include <type_traits>
 
+enum LayerIndex
+{
+    kLayerIndexBG1 = 0,
+    kLayerIndexBG2,
+    kLayerIndexBG3,
+    kLayerIndexBG4,
+    kLayerIndexObj,
+    kLayerIndexBack,
+    kLayerIndexCount
+};
+
+enum LayerMaskFlags : unsigned int
+{
+    kLayerMaskNone = 0,
+    kLayerMaskBg1 = 1 << kLayerIndexBG1,
+    kLayerMaskBg2 = 1 << kLayerIndexBG2,
+    kLayerMaskBg3 = 1 << kLayerIndexBG3,
+    kLayerMaskBg4 = 1 << kLayerIndexBG4,
+    kLayerMaskObj = 1 << kLayerIndexObj,
+    kLayerMaskBack = 1 << kLayerIndexBack,
+};
+
 constexpr uint8_t RegisterIndex(uint16_t snesAddr)
 {
     return snesAddr - 0x2100;
@@ -452,6 +474,26 @@ struct LayerFlags : public Write<LayerFlags>
     LayerFlag bg4 : 1;
     LayerFlag obj : 1;
     unsigned int _reserved : 3;
+
+    LayerFlag operator[](LayerIndex idx) const
+    {
+        switch (idx)
+        {
+        case LayerIndex::kLayerIndexBG1:
+            return bg1;
+        case LayerIndex::kLayerIndexBG2:
+            return bg2;
+        case LayerIndex::kLayerIndexBG3:
+            return bg3;
+        case LayerIndex::kLayerIndexBG4:
+            return bg4;
+        case LayerIndex::kLayerIndexObj:
+            return obj;
+        default:
+            assert(false);
+            return LayerFlag::Disable;
+        }
+    }
 };
 #pragma pack(pop)
 REGISTER_CONSTRAINT(LayerFlags);
@@ -498,28 +540,6 @@ enum class ColorMode : unsigned char
 {
     Addition = 0,
     Subtraction = 1
-};
-
-enum LayerIndex
-{
-    kLayerIndexBG1 = 0,
-    kLayerIndexBG2,
-    kLayerIndexBG3,
-    kLayerIndexBG4,
-    kLayerIndexObj,
-    kLayerIndexBack,
-    kLayerIndexCount
-};
-
-enum LayerMaskFlags : unsigned int
-{
-    kLayerMaskNone = 0,
-    kLayerMaskBg1 = 1 << kLayerIndexBG1,
-    kLayerMaskBg2 = 1 << kLayerIndexBG2,
-    kLayerMaskBg3 = 1 << kLayerIndexBG3,
-    kLayerMaskBg4 = 1 << kLayerIndexBG4,
-    kLayerMaskObj = 1 << kLayerIndexObj,
-    kLayerMaskBack = 1 << kLayerIndexBack,
 };
 
 #pragma pack(push, 1)

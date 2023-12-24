@@ -256,14 +256,12 @@ void ReferencePPU::initBus()
     };
 }
 
-using MainScreenOutput = std::pair<std::optional<ColorWithPriority>, LayerMaskFlags>;
-
 OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
 {
     auto windows = computeWindowStates();
     Pixel objPixel = pixel;
     pixel.y() = pixel.y() + 1;
-    using MaybeColorPiority = std::optional<ColorWithPriority>;
+
     std::array<MainScreenOutput, 6> mainScreen;
     std::array<MaybeColorPiority, 6> subScreen;
     mainScreen[5] = MainScreenOutput{ColorWithPriority{cgRam.getBGColor(), Priority::BasePriority}, kLayerMaskBack};
@@ -271,94 +269,47 @@ OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
     auto priorities = Priority::getPriorities(bgModeReg);
 
     // render objects
-    if (enableMainScreen.obj == LayerFlag::Enable || enableSubScreen.obj == LayerFlag::Enable)
+    auto renderObjects = [&]()
     {
-        auto objResult = ObjectRender::renderObjects(oam, objPixel, objSel, vramView, cgRam, priorities.obj);
-        if (enableMainScreen.obj == LayerFlag::Enable)
+        return ObjectRender::renderObjects(oam, objPixel, objSel, vramView, cgRam, priorities.obj);
+    };
+
+    renderLayer(renderObjects,
+                kLayerMaskObj,
+                kLayerIndexObj,
+                windows[kLayerIndexObj],
+                pixel,
+                mainScreen[0],
+                subScreen[0]);
+
+    if (bgModeReg.bgMode != BgMode::Mode7)
+    {
+        auto bgRenders = getBgRenderers();
+        for (int i = 0; i < 4; i++)
         {
-            mainScreen[0] = {objResult, kLayerMaskObj};
-        }
-        if (enableSubScreen.obj == LayerFlag::Enable)
-        {
-            subScreen[0] = objResult;
+            auto &bgRenderer = bgRenders[i];
+            if (!bgRenderer)
+            {
+                continue;
+            }
+            auto renderBg = [&]()
+            {
+                return bgRenderer->renderPixel(pixel);
+            };
+            LayerIndex layerIndex = static_cast<LayerIndex>(i);
+            LayerMaskFlags layermask = static_cast<LayerMaskFlags>(1 << i);
+            renderLayer(renderBg,
+                        layermask,
+                        layerIndex,
+                        windows[i],
+                        pixel,
+                        mainScreen[i + 1],
+                        subScreen[i + 1]
+
+            );
         }
     }
 
-    if (bgModeReg.bgMode == BgMode::Mode1)
-    {
-        // BG 1
-        // if (false)
-        {
-            Vec2<int> offset(bg1Offsets.hOffset.offset(), bg1Offsets.vOffset.offset());
-            int tileAddr = bgNameAddresses.bg12.baseAddr0 << 12;
-            int bitDepth = 4;
-            Background bg1(
-                {bgScreens.bg[0], vramView},
-                offset,
-                tileAddr,
-                bitDepth,
-                priorities.bg[0],
-                cgRam.getBGPalette(0, bgModeReg.bgMode),
-                vramView);
-            auto result = bg1.renderPixel(pixel);
-            if (enableMainScreen.bg1 == LayerFlag::Enable)
-            {
-                mainScreen[1] = {result, kLayerMaskBg1};
-            }
-            if (enableSubScreen.bg1 == LayerFlag::Enable)
-            {
-                subScreen[1] = result;
-            }
-        }
-        // BG 2
-        if (true)
-        {
-            Vec2<int> offset(bgOffsets.bg[0].hOffset.offset(), bgOffsets.bg[0].vOffset.offset());
-            int tileAddr = bgNameAddresses.bg12.baseAddr1 << 12;
-            int bitDepth = 4;
-            Background bg2(
-                {bgScreens.bg[1], vramView},
-                offset,
-                tileAddr,
-                bitDepth,
-                priorities.bg[1],
-                cgRam.getBGPalette(1, bgModeReg.bgMode),
-                vramView);
-            auto result = bg2.renderPixel(pixel);
-            if (enableMainScreen.bg2 == LayerFlag::Enable)
-            {
-                mainScreen[2] = {result, kLayerMaskBg2};
-            }
-            if (enableSubScreen.bg2 == LayerFlag::Enable)
-            {
-                subScreen[2] = result;
-            }
-        }
-        // BG 3
-        // if (false)
-        {
-            Vec2<int> offset(bgOffsets.bg[1].hOffset.offset(), bgOffsets.bg[1].vOffset.offset());
-            int tileAddr = bgNameAddresses.bg34.baseAddr0 << 12;
-            int bitDepth = 2;
-            Background bg3(
-                {bgScreens.bg[2], vramView},
-                offset,
-                tileAddr,
-                bitDepth,
-                priorities.bg[2],
-                cgRam.getBGPalette(2, bgModeReg.bgMode),
-                vramView);
-            auto result = bg3.renderPixel(pixel);
-            if (enableMainScreen.bg3 == LayerFlag::Enable)
-            {
-                mainScreen[3] = {result, kLayerMaskBg3};
-            }
-            if (enableSubScreen.bg3 == LayerFlag::Enable)
-            {
-                subScreen[3] = result;
-            }
-        }
-    }
     auto compare = [](const MaybeColorPiority &a, const MaybeColorPiority &b)
     {
         if (b && !a) {
@@ -414,8 +365,17 @@ OutputPixelFormat ReferencePPU::applyColorMath(
     case ColorWindowFunction::Off:
         return OutputPixelFormat({0, 0, 0});
     case ColorWindowFunction::InsideWindow:
+        if (!window.isActive(pixel.x()))
+        {
+            return OutputPixelFormat({0, 0, 0});
+        }
+        break;
     case ColorWindowFunction::OutsideWindow:
-        break; // return mainScreen;
+        if (window.isActive(pixel.x()))
+        {
+            return OutputPixelFormat({0, 0, 0});
+        }
+        break;
     case ColorWindowFunction::On:
         break;
     }
@@ -438,8 +398,7 @@ OutputPixelFormat ReferencePPU::applyColorMath(
         }
         break;
     }
-    // OutputPixelFormat result = mainScreen;
-    // Vec<int, 4> intermediateColor;
+
     Color5Bit intermediateColor;
     int divisor = colorAddSub.halfEnable ? 2 : 1;
     Color5Bit main = mainScreen.to5Bit();
@@ -453,7 +412,6 @@ OutputPixelFormat ReferencePPU::applyColorMath(
         r = (r + otherColor.red) / divisor;
         g = (g + otherColor.green) / divisor;
         b = (b + otherColor.blue) / divisor;
-        // intermediateColor = (mainScreen + otherColor) / divisor;
         break;
     }
     case ColorMode::Subtraction:
@@ -461,7 +419,6 @@ OutputPixelFormat ReferencePPU::applyColorMath(
         r = (r - otherColor.red) / divisor;
         g = (g - otherColor.green) / divisor;
         b = (b - otherColor.blue) / divisor;
-        // intermediateColor = (mainScreen - otherColor) / divisor;
         break;
     }
     }
@@ -576,4 +533,223 @@ LayerWindow ReferencePPU::getWindow(LayerIndex layer)
     }
 
     return result;
+}
+
+template <typename Callable>
+void ReferencePPU::renderLayer(
+    Callable renderFunc,
+    LayerMaskFlags mask,
+    LayerIndex layerIndex,
+    const LayerWindow &window,
+    Pixel pixel,
+    MainScreenOutput &mainOutput,
+    MaybeColorPiority &subOuput)
+{
+    // check enable and winow flags.
+    const bool windowActive = window.isActive(pixel.x());
+    const bool enabledMain = (enableMainScreen[layerIndex] == LayerFlag::Enable) && (enableMainScreenWindow[layerIndex] == LayerFlag::Disable || !window.isActive(pixel.x()));
+    const bool enabledSub = (colorWindowSelect.ccAddEnable == ColorWindowSource::Subscreen) && (enableSubScreen[layerIndex] == LayerFlag::Enable) && (enableSubScreenWindow[layerIndex] == LayerFlag::Disable || !window.isActive(pixel.x()));
+    if (!enabledMain && !enabledSub)
+    {
+        // skip
+        // no need to calculate pixel color
+        return;
+    }
+
+    MaybeColorPiority c = renderFunc();
+    if (enabledMain)
+    {
+        mainOutput = {c, mask};
+    }
+    if (enabledSub)
+    {
+        subOuput = c;
+    }
+}
+
+struct BGLayerConfig
+{
+    int bitDepth;
+    int numPalettes;
+    bool hvScroll;
+    bool hvFlip;
+    bool mosaic;
+    bool rotateEnlargeReduce;
+    bool windowMask;
+    bool screenAdditionSubstraction;
+    bool colorWindow;
+    bool cgDirectSelect;
+    bool horizontalPsuedo512;
+    bool offsetChange;
+    bool horiz512Mode;
+};
+
+std::optional<int> ReferencePPU::getBGBitDepth(LayerIndex layer)
+{
+    switch (bgModeReg.bgMode)
+    {
+    case BgMode::Mode0:
+    {
+        return 2;
+    }
+    case BgMode::Mode1:
+    {
+        if (layer == kLayerIndexBG1 || layer == kLayerIndexBG2)
+        {
+            return 4;
+        }
+        if (layer == kLayerIndexBG3)
+        {
+            return 2;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode2:
+    {
+        if (layer == kLayerIndexBG1 || layer == kLayerIndexBG2)
+        {
+            return 4;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode3:
+    {
+        if (layer == kLayerIndexBG1)
+        {
+            return 8;
+        }
+        if (layer == kLayerIndexBG2)
+        {
+            return 4;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode4:
+    {
+        if (layer == kLayerIndexBG1)
+        {
+            return 8;
+        }
+        if (layer == kLayerIndexBG2)
+        {
+            return 2;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode5:
+    {
+        if (layer == kLayerIndexBG1)
+        {
+            return 4;
+        }
+        if (layer == kLayerIndexBG2)
+        {
+            return 2;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode6:
+    {
+        if (layer == kLayerIndexBG1)
+        {
+            return 4;
+        }
+        return std::nullopt;
+    }
+    case BgMode::Mode7:
+    {
+        if (layer == kLayerIndexBG1)
+        {
+            return 8;
+        }
+        return std::nullopt;
+    }
+    }
+}
+
+ReferencePPU::BackgroundRenders ReferencePPU::getBgRenderers()
+{
+    BackgroundRenders bgs;
+    auto &bg1 = bgs[0];
+    auto &bg2 = bgs[1];
+    auto &bg3 = bgs[2];
+    auto &bg4 = bgs[3];
+
+    auto priorities = Priority::getPriorities(bgModeReg);
+
+    {
+        auto bitDepth = getBGBitDepth(kLayerIndexBG1);
+        if (bitDepth)
+        {
+            Vec2<int> offset(bg1Offsets.hOffset.offset(), bg1Offsets.vOffset.offset());
+            int tileAddr = bgNameAddresses.bg12.baseAddr0 << 12;
+
+            bg1.emplace(
+                BgScreen{bgScreens.bg[0], vramView},
+                offset,
+                tileAddr,
+                *bitDepth,
+                priorities.bg[0],
+                cgRam.getBGPalette(0, bgModeReg.bgMode),
+                vramView);
+        }
+    }
+    {
+        auto bitDepth = getBGBitDepth(kLayerIndexBG2);
+        if (bitDepth)
+        {
+
+            Vec2<int> offset(bgOffsets.bg[0].hOffset.offset(), bgOffsets.bg[0].vOffset.offset());
+
+            int tileAddr = bgNameAddresses.bg12.baseAddr1 << 12;
+
+            bg2.emplace(
+                BgScreen{bgScreens.bg[1], vramView},
+                offset,
+                tileAddr,
+                *bitDepth,
+                priorities.bg[1],
+                cgRam.getBGPalette(1, bgModeReg.bgMode),
+                vramView);
+        }
+    }
+    {
+        auto bitDepth = getBGBitDepth(kLayerIndexBG3);
+        if (bitDepth)
+        {
+
+            Vec2<int> offset(bgOffsets.bg[1].hOffset.offset(), bgOffsets.bg[1].vOffset.offset());
+
+            int tileAddr = bgNameAddresses.bg34.baseAddr0 << 12;
+
+            bg3.emplace(
+                BgScreen{bgScreens.bg[2], vramView},
+                offset,
+                tileAddr,
+                *bitDepth,
+                priorities.bg[2],
+                cgRam.getBGPalette(2, bgModeReg.bgMode),
+                vramView);
+        }
+    }
+    {
+        auto bitDepth = getBGBitDepth(kLayerIndexBG4);
+        if (bitDepth)
+        {
+
+            Vec2<int> offset(bgOffsets.bg[2].hOffset.offset(), bgOffsets.bg[2].vOffset.offset());
+
+            int tileAddr = bgNameAddresses.bg34.baseAddr1 << 12;
+
+            bg4.emplace(
+                BgScreen{bgScreens.bg[3], vramView},
+                offset,
+                tileAddr,
+                *bitDepth,
+                priorities.bg[3],
+                cgRam.getBGPalette(3, bgModeReg.bgMode),
+                vramView);
+        }
+    }
+    return bgs;
 }

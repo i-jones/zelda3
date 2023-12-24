@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 
 #include "../PPUBase.hpp"
@@ -11,6 +12,7 @@
 #include "VRAM.hpp"
 #include "CGRam.hpp"
 #include "Window.hpp"
+#include "Background.hpp"
 
 using Pixel = Vec2<int>;
 
@@ -38,6 +40,9 @@ public:
 
 private:
     using Windows = std::array<LayerWindow, kLayerIndexCount>;
+    using MaybeColorPiority = std::optional<ColorWithPriority>;
+    using MainScreenOutput = std::pair<std::optional<ColorWithPriority>, LayerMaskFlags>;
+    using BackgroundRenders = std::array<std::optional<Background>, 4>;
 
     void initBus();
 
@@ -51,6 +56,19 @@ private:
         std::optional<OutputPixelFormat> subscreen);
     Windows computeWindowStates();
     LayerWindow getWindow(LayerIndex layer);
+
+    BackgroundRenders getBgRenderers();
+    std::optional<int> getBGBitDepth(LayerIndex layer);
+
+    template <typename Callable>
+    void renderLayer(
+        Callable c,
+        LayerMaskFlags mask,
+        LayerIndex layerIndex,
+        const LayerWindow &window,
+        Pixel pixel,
+        MainScreenOutput &mainOutput,
+        MaybeColorPiority &subOuput);
 
     PpuVRam vramMem;
 
