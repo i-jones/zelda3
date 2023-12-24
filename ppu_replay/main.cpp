@@ -30,7 +30,7 @@ namespace
 
     void executeCmd(const PPUCommand::Command *cmd, PPUBase &ppu, uint8_t *renderBuffer, size_t pitch)
     {
-        std::cerr << "Command Type:  " << PPUCommand::EnumNameCommandType(cmd->command_type()) << "\n";
+        // std::cerr << "Command Type:  " << PPUCommand::EnumNameCommandType(cmd->command_type()) << "\n";
         switch (cmd->command_type())
         {
         case PPUCommand::CommandType_Reset:
@@ -52,7 +52,7 @@ namespace
         case PPUCommand::CommandType_Write:
         {
             auto write = cmd->command_as_Write();
-            std::cerr << "  Adr " << std::hex << (write->adr() + 0x2100) << "\n";
+            // std::cerr << "  Adr " << std::hex << (write->adr() + 0x2100) << "\n";
             ppu.write(write->adr(), write->value());
             break;
         }

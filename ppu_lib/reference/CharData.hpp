@@ -31,6 +31,7 @@ struct CharData
             result <<= 1;
             result |= bit;
         }
+        assert(result < (1 << N));
         return result;
     }
 };

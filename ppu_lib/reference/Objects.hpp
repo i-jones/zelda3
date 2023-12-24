@@ -7,6 +7,8 @@
 #include "register.hpp"
 #include "VRAM.hpp"
 #include "CGRam.hpp"
+#include "RenderOutput.hpp"
+#include "Priority.hpp"
 
 #pragma pack(push, 1)
 struct ObjectDataPacked
@@ -125,11 +127,7 @@ private:
 class ObjectRender
 {
 public:
-    struct Ouput
-    {
-        Color color;
-        int priority;
-    };
+    using Output = ColorWithPriority;
 
     static Vec2<int> getObjectSize(ObjSize size)
     {
@@ -137,6 +135,6 @@ public:
         return Vec2<int>(sizeInt, sizeInt);
     }
 
-    static std::optional<Ouput> renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam);
-    static std::optional<Ouput> renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam);
+    static std::optional<Output> renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam, const Priority::ObjPriorities &priorities);
+    static std::optional<Output> renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam, const Priority::ObjPriorities &priorities);
 };

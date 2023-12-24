@@ -2,17 +2,9 @@
 
 #include <span>
 
-#include "../color.hpp"
+#include "register.hpp"
 
-#pragma pack(push, 1)
-struct Color5Bit
-{
-    unsigned int red : 5;
-    unsigned int green : 5;
-    unsigned int blue : 5;
-};
-#pragma pack(pop)
-static_assert(sizeof(Color5Bit) == 2);
+#include "../color.hpp"
 
 class CGRam
 {
@@ -29,17 +21,27 @@ public:
         {
             assert(idx < N);
             auto c = cgRam[startIndex + idx];
-            return Color(_5to8Bit(c.red), _5to8Bit(c.green), _5to8Bit(c.blue));
+            return c.to8Bit();
         }
 
     private:
-        static constexpr uint8_t _5to8Bit(uint8_t x)
-        {
-            // x * 255/31 approximation
-            return (x << 3) | (x >> 2);
-        }
         const CGRam &cgRam;
         size_t startIndex;
+    };
+
+    class DynamicPalette
+    {
+    public:
+        DynamicPalette(std::span<const Color5Bit> data) : _data(std::move(data)) {}
+        Color operator[](std::size_t idx) const
+        {
+            assert(idx < _data.size());
+            auto c = _data[idx];
+            return c.to8Bit();
+        }
+
+    private:
+        std::span<const Color5Bit> _data;
     };
 
     Color5Bit operator[](size_t idx) const
@@ -50,6 +52,13 @@ public:
     Palette<16> getObjPallete(size_t idx) const
     {
         return Palette<16>(*this, 0x80 + idx * 16);
+    }
+
+    DynamicPalette getBGPalette(int bgIndex, BgMode mode) const;
+
+    Color getBGColor() const
+    {
+        return _data[0].to8Bit();
     }
 
     void write(std::span<const uint8_t, SizeBytes> data)

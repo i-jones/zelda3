@@ -470,11 +470,17 @@ enum class ColorWindowFunction : unsigned char
     Off = 3
 };
 
+enum class ColorWindowSource : unsigned char
+{
+    FixedColor = 0,
+    Subscreen = 1,
+};
+
 #pragma pack(push, 1)
 struct ColorWindowSelect : public Write<ColorWindowSelect>
 {
     bool directSelect : 1;
-    bool ccAddEnable : 1;
+    ColorWindowSource ccAddEnable : 1;
     unsigned int _reserved : 2;
     ColorWindowFunction sub : 2;
     ColorWindowFunction main : 2;
@@ -494,30 +500,37 @@ enum class ColorMode : unsigned char
     Subtraction = 1
 };
 
+enum LayerIndex
+{
+    kLayerIndexBG1 = 0,
+    kLayerIndexBG2,
+    kLayerIndexBG3,
+    kLayerIndexBG4,
+    kLayerIndexObj,
+    kLayerIndexBack,
+    kLayerIndexCount
+};
+
+enum LayerMaskFlags : unsigned int
+{
+    kLayerMaskNone = 0,
+    kLayerMaskBg1 = 1 << kLayerIndexBG1,
+    kLayerMaskBg2 = 1 << kLayerIndexBG2,
+    kLayerMaskBg3 = 1 << kLayerIndexBG3,
+    kLayerMaskBg4 = 1 << kLayerIndexBG4,
+    kLayerMaskObj = 1 << kLayerIndexObj,
+    kLayerMaskBack = 1 << kLayerIndexBack,
+};
+
 #pragma pack(push, 1)
 struct ColorAddSub : public Write<ColorAddSub>
 {
-    bool bg1 : 1;
-    bool bg2 : 1;
-    bool bg3 : 1;
-    bool bg4 : 1;
-    bool obj : 1;
-    bool back : 1;
+    unsigned int enableMask : 6;
     bool halfEnable : 1;
     ColorMode addSub : 1;
 };
 #pragma pack(pop)
 REGISTER_CONSTRAINT(ColorAddSub);
-
-// TODO these should be 5-bit colors
-/*
-struct Color
-{
-    unsigned int r;
-    unsigned int g;
-    unsigned int b;
-};
-*/
 
 /*
 ADDRESS: 2132H

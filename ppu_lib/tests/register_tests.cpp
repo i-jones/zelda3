@@ -120,3 +120,13 @@ TEST(Registers, BG1Offset)
     EXPECT_EQ(r.offset(), 0);
     EXPECT_EQ(r.mode7Offset(), -4096);
 }
+
+TEST(Registers, ColorAddSub)
+{
+    auto a = kLayerMaskBg2 | kLayerMaskBg1;
+    auto b = kLayerMaskBg1;
+    auto c = kLayerMaskBack;
+
+    EXPECT_TRUE(a & b);
+    EXPECT_FALSE(a & c);
+}

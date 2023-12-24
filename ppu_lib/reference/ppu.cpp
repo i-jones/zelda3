@@ -1,6 +1,10 @@
 #include "ppu.hpp"
 
+#include <algorithm>
 #include <iostream>
+
+#include "Background.hpp"
+#include "Priority.hpp"
 
 ReferencePPU::ReferencePPU()
 {
@@ -235,15 +239,15 @@ void ReferencePPU::initBus()
         coldata.write(data);
         if (coldata.red)
         {
-            this->fixedColor.r() = coldata.colorBrillianceData;
+            this->fixedColor.red = coldata.colorBrillianceData;
         }
         if (coldata.green)
         {
-            this->fixedColor.g() = coldata.colorBrillianceData;
+            this->fixedColor.green = coldata.colorBrillianceData;
         }
         if (coldata.blue)
         {
-            this->fixedColor.b() = coldata.colorBrillianceData;
+            this->fixedColor.blue = coldata.colorBrillianceData;
         }
     };
     writeBus[RegisterIndex(0x2133)] = [this](uint8_t data)
@@ -252,19 +256,324 @@ void ReferencePPU::initBus()
     };
 }
 
+using MainScreenOutput = std::pair<std::optional<ColorWithPriority>, LayerMaskFlags>;
+
 OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
 {
-    if (enableMainScreen.obj == LayerFlag::Enable)
+    auto windows = computeWindowStates();
+    Pixel objPixel = pixel;
+    pixel.y() = pixel.y() + 1;
+    using MaybeColorPiority = std::optional<ColorWithPriority>;
+    std::array<MainScreenOutput, 6> mainScreen;
+    std::array<MaybeColorPiority, 6> subScreen;
+    mainScreen[5] = MainScreenOutput{ColorWithPriority{cgRam.getBGColor(), Priority::BasePriority}, kLayerMaskBack};
+
+    auto priorities = Priority::getPriorities(bgModeReg);
+
+    // render objects
+    if (enableMainScreen.obj == LayerFlag::Enable || enableSubScreen.obj == LayerFlag::Enable)
     {
-        auto objResult = ObjectRender::renderObjects(oam, pixel, objSel, vramView, cgRam);
-        if (objResult)
+        auto objResult = ObjectRender::renderObjects(oam, objPixel, objSel, vramView, cgRam, priorities.obj);
+        if (enableMainScreen.obj == LayerFlag::Enable)
         {
-            return OutputPixelFormat(objResult->color);
+            mainScreen[0] = {objResult, kLayerMaskObj};
+        }
+        if (enableSubScreen.obj == LayerFlag::Enable)
+        {
+            subScreen[0] = objResult;
         }
     }
-    return OutputPixelFormat(fixedColor);
+
+    if (bgModeReg.bgMode == BgMode::Mode1)
+    {
+        // BG 1
+        // if (false)
+        {
+            Vec2<int> offset(bg1Offsets.hOffset.offset(), bg1Offsets.vOffset.offset());
+            int tileAddr = bgNameAddresses.bg12.baseAddr0 << 12;
+            int bitDepth = 4;
+            Background bg1(
+                {bgScreens.bg[0], vramView},
+                offset,
+                tileAddr,
+                bitDepth,
+                priorities.bg[0],
+                cgRam.getBGPalette(0, bgModeReg.bgMode),
+                vramView);
+            auto result = bg1.renderPixel(pixel);
+            if (enableMainScreen.bg1 == LayerFlag::Enable)
+            {
+                mainScreen[1] = {result, kLayerMaskBg1};
+            }
+            if (enableSubScreen.bg1 == LayerFlag::Enable)
+            {
+                subScreen[1] = result;
+            }
+        }
+        // BG 2
+        if (true)
+        {
+            Vec2<int> offset(bgOffsets.bg[0].hOffset.offset(), bgOffsets.bg[0].vOffset.offset());
+            int tileAddr = bgNameAddresses.bg12.baseAddr1 << 12;
+            int bitDepth = 4;
+            Background bg2(
+                {bgScreens.bg[1], vramView},
+                offset,
+                tileAddr,
+                bitDepth,
+                priorities.bg[1],
+                cgRam.getBGPalette(1, bgModeReg.bgMode),
+                vramView);
+            auto result = bg2.renderPixel(pixel);
+            if (enableMainScreen.bg2 == LayerFlag::Enable)
+            {
+                mainScreen[2] = {result, kLayerMaskBg2};
+            }
+            if (enableSubScreen.bg2 == LayerFlag::Enable)
+            {
+                subScreen[2] = result;
+            }
+        }
+        // BG 3
+        // if (false)
+        {
+            Vec2<int> offset(bgOffsets.bg[1].hOffset.offset(), bgOffsets.bg[1].vOffset.offset());
+            int tileAddr = bgNameAddresses.bg34.baseAddr0 << 12;
+            int bitDepth = 2;
+            Background bg3(
+                {bgScreens.bg[2], vramView},
+                offset,
+                tileAddr,
+                bitDepth,
+                priorities.bg[2],
+                cgRam.getBGPalette(2, bgModeReg.bgMode),
+                vramView);
+            auto result = bg3.renderPixel(pixel);
+            if (enableMainScreen.bg3 == LayerFlag::Enable)
+            {
+                mainScreen[3] = {result, kLayerMaskBg3};
+            }
+            if (enableSubScreen.bg3 == LayerFlag::Enable)
+            {
+                subScreen[3] = result;
+            }
+        }
+    }
+    auto compare = [](const MaybeColorPiority &a, const MaybeColorPiority &b)
+    {
+        if (b && !a) {
+            return true;
+        } else if (b && b->priority > a ->priority) {
+            return true;
+        }
+        return false; };
+    auto compareMain = [compare](const MainScreenOutput &a, const MainScreenOutput &b)
+    { return compare(a.first, b.first); };
+
+    auto mainMaxIt = std::max_element(mainScreen.begin(), mainScreen.end(), compareMain);
+    assert(mainMaxIt != mainScreen.end());
+    auto subMaxIt = std::max_element(subScreen.begin(), subScreen.end(), compare);
+    assert(subMaxIt != subScreen.end());
+
+    std::optional<OutputPixelFormat> subscreenValue;
+    if (*subMaxIt)
+    {
+        subscreenValue = subMaxIt->value().color;
+    }
+    return applyColorMath(
+        pixel,
+        windows[kLayerIndexBack],
+        mainMaxIt->first->color,
+        mainMaxIt->second,
+        subscreenValue);
+    return OutputPixelFormat(mainMaxIt->first->color);
+}
+
+OutputPixelFormat ReferencePPU::applyColorMath(
+    Pixel pixel,
+    const LayerWindow &window,
+    OutputPixelFormat mainScreen,
+    LayerMaskFlags mainFlags,
+    std::optional<OutputPixelFormat> subscreen)
+{
+    int py = pixel.y();
+    // disabled for layer
+    if (!(colorAddSub.enableMask & mainFlags))
+    {
+        return mainScreen;
+    }
+
+    Color5Bit otherColor = fixedColor;
+    if (colorWindowSelect.ccAddEnable == ColorWindowSource::Subscreen && subscreen)
+    {
+        otherColor = subscreen->to5Bit();
+    }
+    // TODO check window
+    switch (colorWindowSelect.main)
+    {
+    case ColorWindowFunction::Off:
+        return OutputPixelFormat({0, 0, 0});
+    case ColorWindowFunction::InsideWindow:
+    case ColorWindowFunction::OutsideWindow:
+        break; // return mainScreen;
+    case ColorWindowFunction::On:
+        break;
+    }
+    switch (colorWindowSelect.sub)
+    {
+    case ColorWindowFunction::Off:
+        return mainScreen;
+    case ColorWindowFunction::On:
+        break;
+    case ColorWindowFunction::InsideWindow:
+        if (!window.isActive(pixel.x()))
+        {
+            return mainScreen;
+        }
+        break;
+    case ColorWindowFunction::OutsideWindow:
+        if (window.isActive(pixel.x()))
+        {
+            return mainScreen;
+        }
+        break;
+    }
+    // OutputPixelFormat result = mainScreen;
+    // Vec<int, 4> intermediateColor;
+    Color5Bit intermediateColor;
+    int divisor = colorAddSub.halfEnable ? 2 : 1;
+    Color5Bit main = mainScreen.to5Bit();
+    int r = main.red;
+    int g = main.green;
+    int b = main.blue;
+    switch (colorAddSub.addSub)
+    {
+    case ColorMode::Addition:
+    {
+        r = (r + otherColor.red) / divisor;
+        g = (g + otherColor.green) / divisor;
+        b = (b + otherColor.blue) / divisor;
+        // intermediateColor = (mainScreen + otherColor) / divisor;
+        break;
+    }
+    case ColorMode::Subtraction:
+    {
+        r = (r - otherColor.red) / divisor;
+        g = (g - otherColor.green) / divisor;
+        b = (b - otherColor.blue) / divisor;
+        // intermediateColor = (mainScreen - otherColor) / divisor;
+        break;
+    }
+    }
+
+    r = std::clamp(r, 0, 31);
+    g = std::clamp(g, 0, 31);
+    b = std::clamp(b, 0, 31);
+    Color5Bit result;
+    result.red = r;
+    result.green = g;
+    result.blue = b;
+    return result.to8Bit();
 }
 
 void ReferencePPU::computeBackground(Pixel pixel)
 {
+}
+
+ReferencePPU::Windows ReferencePPU::computeWindowStates()
+{
+    Windows windows;
+    for (int i = 0; i < windows.size(); i++)
+    {
+        windows[i] = getWindow(static_cast<LayerIndex>(i));
+    }
+    return windows;
+}
+
+LayerWindow ReferencePPU::getWindow(LayerIndex layer)
+{
+    LayerWindow result;
+    auto &windows = result.windows;
+    windows[0].left = windowPositions[0].left;
+    windows[0].right = windowPositions[0].right;
+    windows[1].left = windowPositions[1].left;
+    windows[1].right = windowPositions[1].right;
+    switch (layer)
+    {
+    case kLayerIndexBG1:
+    {
+        windows[0].enabled = windowSettings.windowBg12.bg1Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowBg12.bg1InOut1;
+
+        windows[1].enabled = windowSettings.windowBg12.bg1Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowBg12.bg1InOut2;
+
+        result.logic = windowBGLogic.bg1;
+
+        break;
+    }
+    case kLayerIndexBG2:
+    {
+        windows[0].enabled = windowSettings.windowBg12.bg2Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowBg12.bg2InOut1;
+
+        windows[1].enabled = windowSettings.windowBg12.bg2Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowBg12.bg2InOut2;
+
+        result.logic = windowBGLogic.bg2;
+
+        break;
+    }
+    case kLayerIndexBG3:
+    {
+        windows[0].enabled = windowSettings.windowBg34.bg1Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowBg34.bg1InOut1;
+
+        windows[1].enabled = windowSettings.windowBg34.bg1Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowBg34.bg1InOut2;
+
+        result.logic = windowBGLogic.bg3;
+
+        break;
+    }
+    case kLayerIndexBG4:
+    {
+        windows[0].enabled = windowSettings.windowBg34.bg2Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowBg34.bg2InOut1;
+
+        windows[1].enabled = windowSettings.windowBg34.bg2Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowBg34.bg2InOut2;
+
+        result.logic = windowBGLogic.bg4;
+
+        break;
+    }
+    case kLayerIndexObj:
+    {
+        windows[0].enabled = windowSettings.windowObjColor.bg1Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowObjColor.bg1InOut1;
+
+        windows[1].enabled = windowSettings.windowObjColor.bg1Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowObjColor.bg1InOut2;
+
+        result.logic = windowObjectLogic.obj;
+        break;
+    }
+    case kLayerIndexBack:
+    {
+        windows[0].enabled = windowSettings.windowObjColor.bg2Enable1 == WindowEnabled::On;
+        windows[0].mode = windowSettings.windowObjColor.bg2InOut1;
+
+        windows[1].enabled = windowSettings.windowObjColor.bg2Enable2 == WindowEnabled::On;
+        windows[1].mode = windowSettings.windowObjColor.bg2InOut2;
+
+        result.logic = windowObjectLogic.color;
+        break;
+    }
+    default:
+        assert(false);
+        break;
+    }
+
+    return result;
 }

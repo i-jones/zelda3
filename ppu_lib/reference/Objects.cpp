@@ -4,40 +4,37 @@
 
 #include "CharData.hpp"
 
-std::optional<ObjectRender::Ouput> ObjectRender::renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam)
+std::optional<ObjectRender::Output> ObjectRender::renderObjects(
+    const OAM &oam,
+    Vec2<int> pixel,
+    ObjSel objectSelect,
+    const VRAM &vram,
+    const CGRam &cgRam,
+    const Priority::ObjPriorities &priorities)
 {
-    using PerObjOutput = std::optional<ObjectRender::Ouput>;
-    std::array<std::optional<ObjectRender::Ouput>, OAM::NumObjects> perObjResult;
-    for (int i = 0; i < perObjResult.size(); i++)
+    using PerObjOutput = std::optional<ObjectRender::Output>;
+    std::optional<ObjectRender::Output> result;
+    for (int i = 0; i < OAM::NumObjects; i++)
     {
-        perObjResult[i] = renderObject(oam.get(i), pixel, objectSelect, vram, cgRam);
-    }
-
-    auto maxIt = std::max_element(
-        perObjResult.begin(),
-        perObjResult.end(),
-        [](const PerObjOutput &a, PerObjOutput &b)
+        result = renderObject(oam.get(i), pixel, objectSelect, vram, cgRam, priorities);
+        if (result)
         {
-            if (!a)
-            {
-                return true;
-            }
-            if (!b)
-            {
-                return false;
-            }
-            return a->priority < b->priority; });
-
-    if (maxIt == perObjResult.end())
-    {
-        return std::nullopt;
+            break;
+        }
     }
-    return *maxIt;
+    return result;
 }
 
-std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam)
+std::optional<ObjectRender::Output> ObjectRender::renderObject(
+    const ObjectData &obj,
+    Vec2<int> pixel,
+    ObjSel objectSelect,
+    const VRAM &vram,
+    const CGRam &cgRam, const Priority::ObjPriorities &priorities)
 {
     auto localPos = pixel - obj.position;
+    // wrap around
+    localPos.y() = localPos.y() & 0xff;
 
     const auto objectSize = ObjectRender::getObjectSize(objectSelect.getObjectSize(obj.type));
     const BBox<int> box(Vec2<int>::Zero(), objectSize);
@@ -79,5 +76,5 @@ std::optional<ObjectRender::Ouput> ObjectRender::renderObject(const ObjectData &
     //  lookup color in pallete
     auto p = cgRam.getObjPallete(obj.color);
     Color c = p[colorIndex];
-    return ObjectRender::Ouput{c, 100};
+    return ObjectRender::Output{c, priorities[obj.objPriority]};
 }

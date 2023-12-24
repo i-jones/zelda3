@@ -45,7 +45,12 @@ add_library(
   reference/Objects.cpp
   reference/Objects.hpp
   reference/CGRam.hpp
-  reference/VRAM.hpp)
+  reference/CGRam.cpp
+  reference/VRAM.hpp
+  reference/Background.hpp
+  reference/Background.cpp
+  reference/Priority.hpp
+  reference/Priority.cpp)
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 

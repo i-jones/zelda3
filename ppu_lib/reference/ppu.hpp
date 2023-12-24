@@ -10,6 +10,7 @@
 #include "Objects.hpp"
 #include "VRAM.hpp"
 #include "CGRam.hpp"
+#include "Window.hpp"
 
 using Pixel = Vec2<int>;
 
@@ -36,10 +37,20 @@ public:
     Ppu *getPpu() override;
 
 private:
+    using Windows = std::array<LayerWindow, kLayerIndexCount>;
+
     void initBus();
 
     OutputPixelFormat computePixel(Pixel pixel);
     void computeBackground(Pixel pixel);
+    OutputPixelFormat applyColorMath(
+        Pixel pixel,
+        const LayerWindow &window,
+        OutputPixelFormat mainScreen,
+        LayerMaskFlags mainFlags,
+        std::optional<OutputPixelFormat> subscreen);
+    Windows computeWindowStates();
+    LayerWindow getWindow(LayerIndex layer);
 
     PpuVRam vramMem;
 
@@ -76,7 +87,7 @@ private:
     ColorWindowSelect colorWindowSelect;
     ColorAddSub colorAddSub;
 
-    Color fixedColor;
+    Color5Bit fixedColor;
 
     ScreenInitSettings screenInitSettings;
 

@@ -15,6 +15,7 @@ public:
     template <typename T>
     const T &readAs(AddrType address) const
     {
+        address = address & (Size - 1);
         assert(address < Size);
         const char *base = reinterpret_cast<const char *>(&storage[address]);
         const char *end = base + sizeof(T);

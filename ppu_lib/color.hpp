@@ -22,11 +22,34 @@ struct TColor : public Vec<ColorElementType, 3>
 
 using Color = TColor<uint8_t>;
 
+#pragma pack(push, 1)
+struct Color5Bit
+{
+    unsigned int red : 5;
+    unsigned int green : 5;
+    unsigned int blue : 5;
+
+    Color to8Bit() const
+    {
+        return Color(_5to8Bit(red), _5to8Bit(green), _5to8Bit(blue));
+    }
+
+private:
+    static constexpr uint8_t _5to8Bit(uint8_t x)
+    {
+        // x * 255/31 approximation
+        return (x << 3) | (x >> 2);
+    }
+};
+#pragma pack(pop)
+static_assert(sizeof(Color5Bit) == 2);
+
 struct OutputPixelFormat : public Vec<uint8_t, 4>
 {
     OutputPixelFormat() = default;
     OutputPixelFormat(const Vec<uint8_t, 4> &v) : Vec<uint8_t, 4>(v) {}
     OutputPixelFormat(Color c) : Vec({c.b(), c.g(), c.r(), 0}) {}
+    OutputPixelFormat(const Vec<int, 4> &v) : Vec<uint8_t, 4>(v.cast<uint8_t>()) {}
 
     uint8_t &b() { return this->elem[0]; }
     uint8_t b() const { return this->elem[0]; }
@@ -39,6 +62,15 @@ struct OutputPixelFormat : public Vec<uint8_t, 4>
 
     uint8_t &a() { return this->elem[3]; }
     uint8_t a() const { return this->elem[3]; }
+
+    Color5Bit to5Bit() const
+    {
+        Color5Bit fiveBit;
+        fiveBit.red = r() >> 3;
+        fiveBit.green = g() >> 3;
+        fiveBit.blue = b() >> 3;
+        return fiveBit;
+    }
 };
 static_assert(sizeof(OutputPixelFormat) == sizeof(uint32_t));
 static_assert(std::is_pod_v<OutputPixelFormat>);
