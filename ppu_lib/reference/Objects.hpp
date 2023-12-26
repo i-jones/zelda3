@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 
 #include "../color.hpp"
 #include "../vec.hpp"
@@ -61,7 +62,7 @@ struct ObjectDataExtra
 
     std::pair<unsigned int, ObjType> get(size_t index) const
     {
-        assert(index < 8);
+        // assert(index < 8);
         unsigned int msb = (raw >> (index * 2)) & 1;
         unsigned int type = (raw >> (index * 2 + 1)) & 1;
         return std::make_pair(msb, static_cast<ObjType>(type));
@@ -135,6 +136,32 @@ public:
         return Vec2<int>(sizeInt, sizeInt);
     }
 
-    static std::optional<Output> renderObjects(const OAM &oam, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam, const Priority::ObjPriorities &priorities);
-    static std::optional<Output> renderObject(const ObjectData &obj, Vec2<int> pixel, ObjSel objectSelect, const VRAM &vram, const CGRam &cgRam, const Priority::ObjPriorities &priorities);
+    static void getObjectsForScanline(
+        const OAM &oam,
+        int y,
+        ObjSel objectSelect,
+        std::vector<ObjectData> &output);
+
+    static std::optional<Output> renderObjects(
+        const OAM &oam,
+        Vec2<int> pixel,
+        ObjSel objectSelect,
+        const VRAM &vram,
+        const CGRam &cgRam,
+        const Priority::ObjPriorities &priorities);
+    static std::optional<Output> renderObject(
+        const ObjectData &obj,
+        Vec2<int> pixel,
+        ObjSel objectSelect,
+        const VRAM &vram,
+        const CGRam &cgRam,
+        const Priority::ObjPriorities &priorities);
+
+    static std::optional<Output> renderObjectList(
+        std::span<const ObjectData> objects,
+        Vec2<int> pixel,
+        ObjSel objectSelect,
+        const VRAM &vram,
+        const CGRam &cgRam,
+        const Priority::ObjPriorities &priorities);
 };

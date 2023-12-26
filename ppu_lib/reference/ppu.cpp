@@ -21,10 +21,20 @@ void ReferencePPU::runLine(int line)
 {
     if (line == 0)
         return;
+
+    auto windows = computeWindowStates();
+    auto priorities = Priority::getPriorities(bgModeReg);
+    const int y = line - 1;
+    ObjectRender::getObjectsForScanline(oam, line - 1, objSel, scanlineObjects);
+    auto bgRenders = getBgRenderers();
     for (int x = 0; x < ScreenWidth; x++)
     {
-        Pixel p(x, line - 1);
-        OutputPixelFormat c = computePixel(p);
+        Pixel p(x, y);
+        OutputPixelFormat c = computePixel(
+            windows,
+            priorities,
+            bgRenders,
+            p);
         c = (c * iniDisp.fade / 15).cast<uint8_t>();
         // Write color to output buffer
         renderBuffer->writePixel(p, c);
@@ -256,9 +266,12 @@ void ReferencePPU::initBus()
     };
 }
 
-OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
+OutputPixelFormat ReferencePPU::computePixel(
+    const Windows &windows,
+    const Priority::Priorities &priorities,
+    const BackgroundRenders &bgRenders,
+    Pixel pixel)
 {
-    auto windows = computeWindowStates();
     Pixel objPixel = pixel;
     pixel.y() = pixel.y() + 1;
 
@@ -266,25 +279,24 @@ OutputPixelFormat ReferencePPU::computePixel(Pixel pixel)
     std::array<MaybeColorPiority, 6> subScreen;
     mainScreen[5] = MainScreenOutput{ColorWithPriority{cgRam.getBGColor(), Priority::BasePriority}, kLayerMaskBack};
 
-    auto priorities = Priority::getPriorities(bgModeReg);
-
     // render objects
-    auto renderObjects = [&]()
+    if (true)
     {
-        return ObjectRender::renderObjects(oam, objPixel, objSel, vramView, cgRam, priorities.obj);
-    };
+        auto renderObjects = [&]()
+        {
+            return ObjectRender::renderObjectList(scanlineObjects, objPixel, objSel, vramView, cgRam, priorities.obj);
+        };
 
-    renderLayer(renderObjects,
-                kLayerMaskObj,
-                kLayerIndexObj,
-                windows[kLayerIndexObj],
-                pixel,
-                mainScreen[0],
-                subScreen[0]);
-
+        renderLayer(renderObjects,
+                    kLayerMaskObj,
+                    kLayerIndexObj,
+                    windows[kLayerIndexObj],
+                    pixel,
+                    mainScreen[0],
+                    subScreen[0]);
+    }
     if (bgModeReg.bgMode != BgMode::Mode7)
     {
-        auto bgRenders = getBgRenderers();
         for (int i = 0; i < 4; i++)
         {
             auto &bgRenderer = bgRenders[i];

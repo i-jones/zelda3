@@ -115,29 +115,3 @@ std::optional<ColorWithPriority> Background::renderPixel(Vec2<int> pixel) const
 
     return std::nullopt;
 }
-
-/*
-x=89
-y=65
-tilemapAdr=4363
-tile=7528
-layer->tileAdr=8192
-layer->tilemapAdr=4096
-layerp->tilemapWider=true
-layerp->tilemapHigher=true
-paleteSize = 16
-paletteNum = 7
-pixel = 13
-*/
-
-/*
-x=0
-y=32
-layer->tilemapAdr=0
-layer->tileAdr=8192
-tilemapadr=128
-tileNum=189
-paletteSie=16
-palettenumber=4
-pixel=2
-*/

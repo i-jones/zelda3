@@ -30,7 +30,8 @@ std::optional<ObjectRender::Output> ObjectRender::renderObject(
     Vec2<int> pixel,
     ObjSel objectSelect,
     const VRAM &vram,
-    const CGRam &cgRam, const Priority::ObjPriorities &priorities)
+    const CGRam &cgRam,
+    const Priority::ObjPriorities &priorities)
 {
     auto localPos = pixel - obj.position;
     // wrap around
@@ -77,4 +78,49 @@ std::optional<ObjectRender::Output> ObjectRender::renderObject(
     auto p = cgRam.getObjPallete(obj.color);
     Color c = p[colorIndex];
     return ObjectRender::Output{c, priorities[obj.objPriority]};
+}
+
+void ObjectRender::getObjectsForScanline(
+    const OAM &oam,
+    int y,
+    ObjSel objectSelect,
+    std::vector<ObjectData> &output)
+{
+    output.clear();
+    // TODO clip max number of objects per scanline
+    output.reserve(OAM::NumObjects);
+    for (int i = 0; i < OAM::NumObjects; i++)
+    {
+        auto obj = oam.get(i);
+        auto localY = y - obj.position.y();
+        // wrap around
+        localY = localY & 0xff;
+        const auto objectSize = ObjectRender::getObjectSize(objectSelect.getObjectSize(obj.type));
+        if (localY >= 0 && localY < objectSize.y())
+        {
+            output.push_back(obj);
+        }
+    }
+}
+
+std::optional<ObjectRender::Output>
+ObjectRender::renderObjectList(
+    std::span<const ObjectData> objects,
+    Vec2<int> pixel,
+    ObjSel objectSelect,
+    const VRAM &vram,
+    const CGRam &cgRam,
+    const Priority::ObjPriorities &priorities)
+{
+    using PerObjOutput = std::optional<ObjectRender::Output>;
+    std::optional<ObjectRender::Output> result;
+    for (const auto &obj : objects)
+    {
+        result = renderObject(obj, pixel, objectSelect, vram, cgRam, priorities);
+        if (result)
+        {
+            break;
+        }
+    }
+    return result;
 }

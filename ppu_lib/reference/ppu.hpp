@@ -46,7 +46,11 @@ private:
 
     void initBus();
 
-    OutputPixelFormat computePixel(Pixel pixel);
+    OutputPixelFormat computePixel(
+        const Windows &windows,
+        const Priority::Priorities &priorities,
+        const BackgroundRenders &bgRenderers,
+        Pixel pixel);
     void computeBackground(Pixel pixel);
     OutputPixelFormat applyColorMath(
         Pixel pixel,
@@ -118,4 +122,5 @@ private:
     CGRam cgRam;
 
     std::optional<RenderBuffer> renderBuffer;
+    std::vector<ObjectData> scanlineObjects;
 };

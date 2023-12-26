@@ -16,10 +16,10 @@ public:
     const T &readAs(AddrType address) const
     {
         address = address & (Size - 1);
-        assert(address < Size);
+        // assert(address < Size);
         const char *base = reinterpret_cast<const char *>(&storage[address]);
         const char *end = base + sizeof(T);
-        assert(end <= reinterpret_cast<const char *>(&storage[Size]));
+        // assert(end <= reinterpret_cast<const char *>(&storage[Size]));
 
         return *reinterpret_cast<const T *>(base);
     }
