@@ -50,6 +50,7 @@ private:
         const Windows &windows,
         const Priority::Priorities &priorities,
         const BackgroundRenders &bgRenderers,
+        const Mode7FixedMatrix &m,
         Pixel pixel);
     void computeBackground(Pixel pixel);
     OutputPixelFormat applyColorMath(
@@ -73,6 +74,8 @@ private:
         Pixel pixel,
         MainScreenOutput &mainOutput,
         MaybeColorPiority &subOuput);
+
+    Mode7FixedMatrix getMatrix() const;
 
     PpuVRam vramMem;
 
@@ -112,6 +115,8 @@ private:
     Color5Bit fixedColor;
 
     ScreenInitSettings screenInitSettings;
+
+    Mode7Matrix mode7Matrix;
 
     using WriteFunc = std::function<void(uint8_t)>;
     using WriteBus = std::array<WriteFunc, 0x2133 - 0x2100 + 1>;

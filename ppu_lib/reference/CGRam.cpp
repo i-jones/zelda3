@@ -21,6 +21,12 @@ CGRam::DynamicPalette CGRam::getBGPalette(int bgIndex, BgMode mode) const
         }
     }
     break;
+    case BgMode::Mode7:
+    {
+        offset = 0;
+        size = 256;
+        break;
+    }
     default:
         assert(false);
         break;

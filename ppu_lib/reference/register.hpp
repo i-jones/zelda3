@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "Fixed.hpp"
+
 enum LayerIndex
 {
     kLayerIndexBG1 = 0,
@@ -383,6 +385,58 @@ struct M7Sel : public Write<M7Sel>
 };
 #pragma pack(pop)
 REGISTER_CONSTRAINT(M7Sel);
+
+/*
+ADDRESS: NAME: CONTENTS:
+211B H / 211C H/ 211D H /211E H/ 211F H/ 2120 H M7A / M7B /M 7 C / M7D /M 7 X / M7Y
+•
+•
+•
+ROTATION/ENLARGEMENT/REDUCTION IN MODE-7, CENTER COORDINATE SETTINGS & MULTIPLICAND/MULTIPLIER SETTINGS OF COMPLEMENTARY MULTIPLICATION
+*/
+
+template <size_t N>
+class TMatrixParameter
+{
+public:
+    void reset()
+    {
+        _writeIndex = 0;
+    }
+    void write(std::uint8_t value)
+    {
+        _bytes[_writeIndex] = value;
+        _writeIndex = (_writeIndex + 1) % 2;
+    }
+
+    Fixed16 value() const
+    {
+        return Fixed16::fromRaw(_value);
+    }
+
+    std::int16_t raw() const { return _value; }
+
+private:
+    union
+    {
+        std::uint8_t _bytes[2];
+        int _value : N;
+    };
+    unsigned int _writeIndex = 0;
+};
+
+using MatrixParameter = TMatrixParameter<16>;
+using MatrixOffsetParameter = TMatrixParameter<13>;
+
+struct Mode7Matrix
+{
+    MatrixParameter a;
+    MatrixParameter b;
+    MatrixParameter c;
+    MatrixParameter d;
+    MatrixOffsetParameter x0;
+    MatrixOffsetParameter y0;
+};
 
 /*
 ADDRESS: 2123H / 2124H / 2125H

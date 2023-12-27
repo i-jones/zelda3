@@ -59,7 +59,12 @@ target_link_libraries(ppu_lib PRIVATE PPUFBSchemas Boost::iostreams)
 
 add_library(zelda3::ppu_lib ALIAS ppu_lib)
 
-add_executable(ppu_lib_tests tests/register_tests.cpp tests/chardata_tests.cpp tests/objects_tests.cpp)
+add_executable(
+  ppu_lib_tests
+  tests/register_tests.cpp
+  tests/chardata_tests.cpp
+  tests/objects_tests.cpp
+  tests/fixed_tests.cpp)
 target_link_libraries(ppu_lib_tests GTest::gtest_main ppu_lib)
 
 include(GoogleTest)

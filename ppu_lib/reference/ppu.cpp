@@ -27,6 +27,7 @@ void ReferencePPU::runLine(int line)
     const int y = line - 1;
     ObjectRender::getObjectsForScanline(oam, line - 1, objSel, scanlineObjects);
     auto bgRenders = getBgRenderers();
+    auto matrix = getMatrix();
     for (int x = 0; x < ScreenWidth; x++)
     {
         Pixel p(x, y);
@@ -34,6 +35,7 @@ void ReferencePPU::runLine(int line)
             windows,
             priorities,
             bgRenders,
+            matrix,
             p);
         c = (c * iniDisp.fade / 15).cast<uint8_t>();
         // Write color to output buffer
@@ -93,7 +95,7 @@ void ReferencePPU::initBus()
         {
             auto snesAdr = i + 0x2100;
 
-            // std::cerr << "Write to " << std::hex << (i + 0x2100) << " not implemented!\n";
+            std::cerr << "Write to " << std::hex << (i + 0x2100) << " not implemented!\n";
         };
     }
 
@@ -166,12 +168,32 @@ void ReferencePPU::initBus()
     {
         this->mode7Select.write(data);
     };
-    // TODO 211B mode7 A
-    // TODO 211C mode7 B
-    // TODO 211D mode7 C
-    // TODO 211E mode7 D
-    // TODO 211F mode7 X
-    // TODO 2120 mode7 Y
+
+    // Mode 7 matrix;
+    writeBus[RegisterIndex(0x211B)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.a.write(data);
+    };
+    writeBus[RegisterIndex(0x211C)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.b.write(data);
+    };
+    writeBus[RegisterIndex(0x211d)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.c.write(data);
+    };
+    writeBus[RegisterIndex(0x211e)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.d.write(data);
+    };
+    writeBus[RegisterIndex(0x211f)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.x0.write(data);
+    };
+    writeBus[RegisterIndex(0x2120)] = [this](uint8_t data)
+    {
+        this->mode7Matrix.y0.write(data);
+    };
 
     writeBus[RegisterIndex(0x2121)] = [this](uint8_t data)
     {
@@ -270,6 +292,7 @@ OutputPixelFormat ReferencePPU::computePixel(
     const Windows &windows,
     const Priority::Priorities &priorities,
     const BackgroundRenders &bgRenders,
+    const Mode7FixedMatrix &m,
     Pixel pixel)
 {
     Pixel objPixel = pixel;
@@ -307,6 +330,32 @@ OutputPixelFormat ReferencePPU::computePixel(
             auto renderBg = [&]()
             {
                 return bgRenderer->renderPixel(pixel);
+            };
+            LayerIndex layerIndex = static_cast<LayerIndex>(i);
+            LayerMaskFlags layermask = static_cast<LayerMaskFlags>(1 << i);
+            renderLayer(renderBg,
+                        layermask,
+                        layerIndex,
+                        windows[i],
+                        pixel,
+                        mainScreen[i + 1],
+                        subScreen[i + 1]
+
+            );
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 1; i++)
+        {
+            auto &bgRenderer = bgRenders[i];
+            if (!bgRenderer)
+            {
+                continue;
+            }
+            auto renderBg = [&]()
+            {
+                return bgRenderer->renderMode7(m, pixel);
             };
             LayerIndex layerIndex = static_cast<LayerIndex>(i);
             LayerMaskFlags layermask = static_cast<LayerMaskFlags>(1 << i);
@@ -689,6 +738,21 @@ ReferencePPU::BackgroundRenders ReferencePPU::getBgRenderers()
 
     auto priorities = Priority::getPriorities(bgModeReg);
 
+    if (bgModeReg.bgMode == BgMode::Mode7)
+    {
+        Vec2<int> offset(bg1Offsets.hOffset.mode7Offset(), bg1Offsets.vOffset.mode7Offset());
+        int tileAddr = bgNameAddresses.bg12.baseAddr0 << 12;
+
+        bg1.emplace(
+            BgScreen{bgScreens.bg[0], vramView},
+            offset,
+            tileAddr,
+            8,
+            priorities.bg[0],
+            cgRam.getBGPalette(0, bgModeReg.bgMode),
+            vramView);
+    }
+    else
     {
         auto bitDepth = getBGBitDepth(kLayerIndexBG1);
         if (bitDepth)
@@ -764,4 +828,16 @@ ReferencePPU::BackgroundRenders ReferencePPU::getBgRenderers()
         }
     }
     return bgs;
+}
+
+Mode7FixedMatrix ReferencePPU::getMatrix() const
+{
+    return Mode7FixedMatrix{
+        mode7Matrix.a.value(),
+        mode7Matrix.b.value(),
+        mode7Matrix.c.value(),
+        mode7Matrix.d.value(),
+        Int13::fromRaw(mode7Matrix.x0.raw()),
+        Int13::fromRaw(mode7Matrix.y0.raw()),
+    };
 }

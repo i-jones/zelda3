@@ -115,3 +115,53 @@ std::optional<ColorWithPriority> Background::renderPixel(Vec2<int> pixel) const
 
     return std::nullopt;
 }
+
+struct Mode7CharData
+{
+    std::uint8_t name;
+    std::uint8_t colorIndex;
+};
+
+std::optional<ColorWithPriority>
+Background::renderMode7(const Mode7FixedMatrix &m, Vec2<int> pixel) const
+{
+    // Convert pixel location to bg local location
+    const auto hOffset = Int13::fromRaw(_offset.x());
+    const auto vOffset = Int13::fromRaw(_offset.y());
+
+    // TODO handle mode7 screen flip
+    // if(ppu.io.hflipMode7) x = 255 - x;
+    // if(ppu.io.vflipMode7) y = 255 - y;
+
+    const auto y = Int13::fromRaw(pixel.y());
+    const auto x = Int13::fromRaw(pixel.x());
+
+    const auto deltaX = hOffset - m.x0;
+    const auto deltaY = vOffset - m.y0;
+    const auto originX = m.a * deltaX + m.b * deltaY + m.b * y + m.x0;
+    const auto originY = m.c * deltaX + m.d * deltaY + m.d * y + m.y0;
+    const auto px = (originX + m.a * x).toInt();
+    const auto py = (originY + m.c * x).toInt();
+
+    // TODO handle out of bounds
+
+    const auto tileRow = py / 8;
+    const auto tileColumn = px / 8;
+    const auto pixelRow = py % 8;
+    const auto pixelCol = px % 8;
+
+    const auto tileAddress = tileRow * 128 + tileColumn;
+    const auto tileIndex = _vram.readAs<Mode7CharData>(tileAddress).name;
+    const auto colorAddress = (tileIndex << 6) + pixelRow * 8 + pixelCol;
+
+    const auto colorIndex = _vram.readAs<Mode7CharData>(colorAddress).colorIndex;
+
+    // sample tile color
+    if (colorIndex != 0)
+    {
+        const auto color = _palette[colorIndex];
+        return ColorWithPriority{color, _priorities[0]};
+    }
+
+    return std::nullopt;
+}

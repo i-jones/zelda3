@@ -47,6 +47,12 @@ private:
     BGSC _settings;
 };
 
+struct Mode7FixedMatrix
+{
+    Fixed16 a, b, c, d;
+    Int13 x0, y0;
+};
+
 class Background
 {
 public:
@@ -60,6 +66,7 @@ public:
         const VRAM &vram);
 
     std::optional<ColorWithPriority> renderPixel(Vec2<int> pixel) const;
+    std::optional<ColorWithPriority> renderMode7(const Mode7FixedMatrix &m, Vec2<int> pixel) const;
 
 private:
     BgScreen _bgScreen;
