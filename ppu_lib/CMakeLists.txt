@@ -54,8 +54,8 @@ add_library(
 
 target_compile_features(ppu_lib PUBLIC cxx_std_20)
 
-target_link_libraries(ppu_lib PUBLIC zelda3::snes)
-target_link_libraries(ppu_lib PRIVATE PPUFBSchemas Boost::iostreams)
+target_link_libraries(ppu_lib PUBLIC zelda3::snes PPUFBSchemas)
+target_link_libraries(ppu_lib PRIVATE Boost::iostreams)
 
 add_library(zelda3::ppu_lib ALIAS ppu_lib)
 

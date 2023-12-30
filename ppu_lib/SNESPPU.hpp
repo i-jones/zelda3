@@ -32,6 +32,9 @@ public:
     void setExtraLeftRight(uint8_t extraLeftRight) override;
     Ppu *getPpu() override;
 
+    flatbuffers::Offset<PPUCommand::PPUState> createState(flatbuffers::FlatBufferBuilder &builder) override;
+    void applyState(const PPUCommand::PPUState *PPUState) override;
+
 private:
     std::unique_ptr<Ppu, void (*)(Ppu *)> _ppu;
 };

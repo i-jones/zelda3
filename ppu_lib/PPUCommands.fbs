@@ -65,6 +65,135 @@ table ValidateImage {
     image: [uint8];
 }
 
+table PPUState {
+    //0x2100
+    inidisp: uint8;
+    //0x2101
+    objsel: uint8;
+    //0x2102
+    oamaddl: uint8;
+    //0x2103
+    oamaddh: uint8;
+    //0x2104
+    // OAM data
+    //0x2105
+    bgmode: uint8;
+    //0x2106
+    mosaic: uint8;
+    //0x2107
+    bg1sc: uint8;
+    //0x2108
+    bg2sc: uint8;
+    //0x2109
+    bg3sc: uint8;
+    //0x210A
+    bg4sc: uint8;
+    //0x210B
+    bg12nba: uint8;
+    //0x210C
+    bg34nba: uint8;
+    //0x210D
+    bg1hofs: uint16;
+    bg1hofsmode7: int16;
+    //0x210E
+    bg1vofs: uint16;
+    bg1vofsmode7: int16;
+    //0x210F
+    bg2hofs: uint16;
+    //0x2110
+    bg2vofs: uint16;
+     //0x2111
+    bg3hofs: uint16;
+    //0x2112
+    bg3vofs: uint16;
+     //0x2113
+    bg4hofs: uint16;
+    //0x2114
+    bg4vofs: uint16;
+
+    //0x2115
+    vmainc: uint8;
+    //0x2116
+    //0x2117
+    vmadd: uint16;
+
+
+    //0x2118
+    //0x2119
+    // vmdatal vmdatah
+
+    //0x211A
+    m7sel: uint8;
+    // 0x211B
+    m7a: int16;
+    // 0x211C
+    m7b: int16;
+    // 0x211D
+    m7c: int16;
+    // 0x211E
+    m7d: int16;
+    // 0x211F
+    m7x: int16;
+    // 0x2120
+    m7y: int16;
+    
+    // 0x2121
+    cgadd: uint8;
+    // 0x2122
+    // cgdata
+
+    // 0x2123
+    w12sel: uint8;
+    // 0x2124
+    w34sel: uint8;
+    // 0x2125
+    wobjsel: uint8;
+    // 0x2126
+    wh0: uint8;
+    // 0x2127
+    wh1: uint8;
+    // 0x2128
+    wh2: uint8;
+    // 0x2129
+    wh3: uint8;
+    // 0x212A
+    wbglog: uint8;
+    // 0x212B
+    wobjlog: uint8;
+    // 0x212C
+    tm: uint8;
+    // 0x212D
+    ts: uint8;
+    // 0x212E
+    tmw: uint8;
+    // 0x212F
+    tsw: uint8;
+    // 0x2130
+    cgswsel: uint8;
+    // 0x2131
+    cgadsub: uint8;
+
+    // 0x2132
+    fixed_color: uint16;
+
+    // 0x2133
+    setini: uint8;
+
+    vram: [uint8];
+    cgram: [uint8];
+    oam: [uint8];
+    mode7_latch: uint8;
+    ppu1_latch: uint8;
+    ppu2_latch: uint8;
+    oam_latch: uint8;
+    oam_buffer: uint8;
+    cgram_latch: uint8;
+    cgram_buffer: uint8;
+
+    // zelda ppu specific state
+    extra_left_right: uint8;
+}
+
 union CommandType {
     Reset,
     RunLine,
@@ -79,7 +208,8 @@ union CommandType {
     GetMode,
     GetExtraLeftRight,
     SetExtraLeftRight,
-    ValidateImage
+    ValidateImage,
+    PPUState
 }
 
 table Command {

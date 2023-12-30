@@ -178,7 +178,7 @@ void ppu_runLine(Ppu *ppu, int line) {
       return;
     }
 
-    if (ppu->renderFlags & kPpuRenderFlags_NewRenderer) {
+    if (false && (ppu->renderFlags & kPpuRenderFlags_NewRenderer)) {
       PpuDrawWholeLine(ppu, line);
     } else {
       if (ppu->mode == 7)

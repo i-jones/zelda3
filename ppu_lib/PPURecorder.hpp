@@ -1,7 +1,9 @@
 #pragma once
 
+#include <optional>
 #include <memory>
 #include <span>
+#include <string_view>
 
 #include "PPUBase.hpp"
 
@@ -59,7 +61,16 @@ public:
     void setExtraLeftRight(uint8_t extraLeftRight) override;
     Ppu *getPpu() override;
 
-    Recording &recording() { return *_recording; }
+    flatbuffers::Offset<PPUCommand::PPUState> createState(flatbuffers::FlatBufferBuilder &builder) override;
+    void applyState(const PPUCommand::PPUState *PPUState) override;
+
+    Recording *recording()
+    {
+        return _recording.get();
+    }
+
+    void initRecording(bool captureState = true);
+    bool endRecording(std::optional<std::string_view> name);
 
 private:
     std::unique_ptr<PPUBase> _ppu;

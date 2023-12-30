@@ -29,9 +29,27 @@ struct Color5Bit
     unsigned int green : 5;
     unsigned int blue : 5;
 
+    static Color5Bit fromUint16(std::uint16_t value)
+    {
+        union
+        {
+            Color5Bit color;
+            std::uint16_t v;
+        } x;
+        x.v = value;
+        return x.color;
+    }
+
     Color to8Bit() const
     {
         return Color(_5to8Bit(red), _5to8Bit(green), _5to8Bit(blue));
+    }
+
+    std::uint16_t asUint16() const
+    {
+        static_assert(sizeof(Color5Bit) == 2);
+        static_assert(std::is_pod_v<Color5Bit>);
+        return *reinterpret_cast<const std::uint16_t *>(this);
     }
 
 private:

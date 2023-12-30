@@ -2,12 +2,18 @@
 
 #include "PPURecorder.hpp"
 
+#include <string>
+
 class PPUFixedFrameRecorder : public PPURecorder
 {
     using Parent = PPURecorder;
 
 public:
-    PPUFixedFrameRecorder(std::unique_ptr<PPUBase> ppu, int breakFrame, bool sparse);
+    PPUFixedFrameRecorder(
+        std::unique_ptr<PPUBase> ppu,
+        int breakFrame,
+        bool sparse,
+        std::string filename);
 
     void beginDrawing(uint8_t *buffer, size_t pitch, uint32_t render_flags) override;
     void runLine(int line) override;
@@ -20,4 +26,5 @@ private:
     int _frameCount = 0;
     int _breakFrame = -1;
     bool _sparse = false;
+    std::string _filename;
 };

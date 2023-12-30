@@ -2,6 +2,9 @@
 
 #include "ppu_interface.h"
 
+#include "flatbuffers/flatbuffers.h"
+#include "generated/PPUCommands_generated.h"
+
 class PPUBase : public PpuImpl
 {
 public:
@@ -23,4 +26,7 @@ public:
     virtual uint8_t getExtraLeftRight() = 0;
     virtual void setExtraLeftRight(uint8_t extraLeftRight) = 0;
     virtual Ppu *getPpu() = 0;
+
+    virtual flatbuffers::Offset<PPUCommand::PPUState> createState(flatbuffers::FlatBufferBuilder &builder) = 0;
+    virtual void applyState(const PPUCommand::PPUState *PPUState) = 0;
 };

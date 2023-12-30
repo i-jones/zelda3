@@ -841,3 +841,165 @@ Mode7FixedMatrix ReferencePPU::getMatrix() const
         Int13::fromRaw(mode7Matrix.y0.raw()),
     };
 }
+
+flatbuffers::Offset<PPUCommand::PPUState>
+ReferencePPU::createState(flatbuffers::FlatBufferBuilder &fbbuilder)
+{
+    return {};
+#if 0
+    PPUCommand::PPUStateBuilder builder(fbbuilder);
+    builder.add_inidisp(iniDisp.raw());
+    builder.add_objsel(objSel.raw());
+    builder.add_oamaddl(oamAddL.raw());
+    builder.add_oamaddh(oamAddH.raw());
+    builder.add_bgmode(bgModeReg.raw());
+    builder.add_mosaic(mosaic.raw());
+    builder.add_bg1sc(bgScreens.bg[0].raw());
+    builder.add_bg2sc(bgScreens.bg[1].raw());
+    builder.add_bg3sc(bgScreens.bg[2].raw());
+    builder.add_bg4sc(bgScreens.bg[3].raw());
+    builder.add_bg12nba(bgNameAddresses.bg12.raw());
+    builder.add_bg34nba(bgNameAddresses.bg34.raw());
+    builder.add_bg1hofs(bg1Offsets.hOffset.offset());
+    builder.add_bg1hofsmode7(bg1Offsets.hOffset.mode7Offset());
+    builder.add_bg1vofs(bg1Offsets.vOffset.offset());
+    builder.add_bg1vofsmode7(bg1Offsets.vOffset.mode7Offset());
+    builder.add_bg2hofs(bgOffsets.bg[0].hOffset.offset());
+    builder.add_bg2vofs(bgOffsets.bg[0].vOffset.offset());
+    builder.add_bg3hofs(bgOffsets.bg[1].hOffset.offset());
+    builder.add_bg3vofs(bgOffsets.bg[1].vOffset.offset());
+    builder.add_bg4hofs(bgOffsets.bg[2].hOffset.offset());
+    builder.add_bg4vofs(bgOffsets.bg[2].vOffset.offset());
+
+    // builder.add_vmainc()
+    // builder.add_vmadd
+
+    builder.add_m7sel(mode7Select.raw());
+    builder.add_m7a(mode7Matrix.a.raw());
+    builder.add_m7b(mode7Matrix.b.raw());
+    builder.add_m7c(mode7Matrix.c.raw());
+    builder.add_m7d(mode7Matrix.d.raw());
+    builder.add_m7x(mode7Matrix.x0.raw());
+    builder.add_m7y(mode7Matrix.y0.raw());
+
+    // builder.add_mode7latch
+
+    // builder.add_cgadd
+
+    builder.add_w12sel(windowSettings.windowBg12.raw());
+    builder.add_w34sel(windowSettings.windowBg34.raw());
+    builder.add_wobjsel(windowSettings.windowObjColor.raw());
+
+    builder.add_wh0(windowPositions[0].left);
+    builder.add_wh1(windowPositions[0].right);
+    builder.add_wh2(windowPositions[1].left);
+    builder.add_wh3(windowPositions[1].right);
+
+    builder.add_wbglog(windowBGLogic.raw());
+    builder.add_wobjlog(windowObjectLogic.raw());
+
+    builder.add_tm(enableMainScreen.raw());
+    builder.add_ts(enableSubScreen.raw());
+    builder.add_tmw(enableMainScreenWindow.raw());
+    builder.add_tsw(enableSubScreenWindow.raw());
+
+    builder.add_cgswsel(colorWindowSelect.raw());
+    builder.add_cgadsub(colorAddSub.raw());
+
+    builder.add_fixed_color(fixedColor.asUint16());
+
+    // Add CGRam
+    // add vram
+    // add oam
+
+    // add latches
+
+    return builder.Finish();
+#endif
+}
+
+void ReferencePPU::applyState(const PPUCommand::PPUState *ppuState)
+{
+
+    write(0x00, ppuState->inidisp());
+    write(0x01, ppuState->objsel());
+    write(0x02, ppuState->oamaddl());
+    write(0x03, ppuState->oamaddh());
+
+    write(0x05, ppuState->bgmode());
+    write(0x06, ppuState->mosaic());
+    write(0x07, ppuState->bg1sc());
+    write(0x08, ppuState->bg2sc());
+    write(0x09, ppuState->bg3sc());
+    write(0x0A, ppuState->bg4sc());
+    write(0x0B, ppuState->bg12nba());
+    write(0x0c, ppuState->bg34nba());
+
+    bgOffsets.bg[0].hOffset.set(ppuState->bg2hofs());
+    bgOffsets.bg[0].vOffset.set(ppuState->bg2vofs());
+
+    bgOffsets.bg[1].hOffset.set(ppuState->bg3hofs());
+    bgOffsets.bg[1].vOffset.set(ppuState->bg3vofs());
+
+    bgOffsets.bg[2].hOffset.set(ppuState->bg4hofs());
+    bgOffsets.bg[2].vOffset.set(ppuState->bg4vofs());
+
+    write(0x15, ppuState->vmainc());
+    //_ppu->vramPointer = ppuState->vmadd();
+
+    write(0x1A, ppuState->m7sel());
+    bg1Offsets.hOffset.setMode7(ppuState->bg1hofsmode7());
+    bg1Offsets.vOffset.setMode7(ppuState->bg1vofsmode7());
+
+    mode7Matrix.a.set(ppuState->m7a());
+    mode7Matrix.b.set(ppuState->m7b());
+    mode7Matrix.c.set(ppuState->m7c());
+    mode7Matrix.d.set(ppuState->m7d());
+    mode7Matrix.x0.set(ppuState->m7x());
+    mode7Matrix.y0.set(ppuState->m7y());
+
+    write(0x21, ppuState->cgadd());
+
+    write(0x23, ppuState->w12sel());
+    write(0x24, ppuState->w34sel());
+    write(0x25, ppuState->wobjsel());
+    write(0x26, ppuState->wh0());
+    write(0x27, ppuState->wh1());
+    write(0x28, ppuState->wh2());
+    write(0x29, ppuState->wh3());
+    write(0x2A, ppuState->wbglog());
+    write(0x2B, ppuState->wobjlog());
+    write(0x2C, ppuState->tm());
+    write(0x2D, ppuState->ts());
+    write(0x2E, ppuState->tmw());
+    write(0x2F, ppuState->tsw());
+    write(0x30, ppuState->cgswsel());
+    write(0x31, ppuState->cgadd());
+    fixedColor = Color5Bit::fromUint16(ppuState->fixed_color());
+
+    write(0x33, ppuState->setini());
+
+    if (auto *oam = ppuState->oam())
+    {
+        writeOam(oam->data(), oam->size());
+    }
+    if (auto *cgram = ppuState->cgram())
+    {
+        writeCGRam(cgram->data(), cgram->size());
+    }
+    if (auto *vram = ppuState->vram())
+    {
+        memcpy(this->vram, vram->data(), vram->size());
+    }
+    /*
+        _ppu->m7prev = ppuState->mode7_latch();
+        _ppu->scrollPrev = ppuState->ppu1_latch();
+        _ppu->scrollPrev2 = ppuState->ppu2_latch();
+
+        _ppu->oamBuffer = ppuState->oam_buffer();
+        _ppu->oamSecondWrite = ppuState->oam_latch();
+
+        _ppu->cgramSecondWrite = ppuState->cgram_latch();
+        _ppu->cgramBuffer = ppuState->cgram_buffer();*/
+    //_ppu->extraLeftRight = ppuState->extra_left_right();
+}

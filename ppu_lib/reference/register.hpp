@@ -48,6 +48,13 @@ struct Write
         static_assert(std::is_pod_v<T>);
         *reinterpret_cast<std::uint8_t *>(this) = value;
     }
+
+    std::uint8_t raw() const
+    {
+        static_assert(sizeof(T) == 1);
+        static_assert(std::is_pod_v<T>);
+        return *reinterpret_cast<const std::uint8_t *>(this);
+    }
 };
 
 #define REGISTER_CONSTRAINT(RegisterType)     \
@@ -290,6 +297,11 @@ public:
         return _mode7Offset;
     }
 
+    void setMode7(int value)
+    {
+        _mode7Offset = value;
+    }
+
 private:
     union
     {
@@ -327,6 +339,11 @@ public:
     unsigned int offset() const
     {
         return _offset;
+    }
+
+    void set(std::uint16_t value)
+    {
+        _offset = value;
     }
 
 private:
@@ -415,6 +432,10 @@ public:
     }
 
     std::int16_t raw() const { return _value; }
+    void set(std::int16_t x)
+    {
+        _value = x;
+    }
 
 private:
     union

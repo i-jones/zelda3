@@ -38,6 +38,9 @@ public:
     void setExtraLeftRight(uint8_t extraLeftRight) override;
     Ppu *getPpu() override;
 
+    flatbuffers::Offset<PPUCommand::PPUState> createState(flatbuffers::FlatBufferBuilder &builder) override;
+    void applyState(const PPUCommand::PPUState *PPUState) override;
+
 private:
     using Windows = std::array<LayerWindow, kLayerIndexCount>;
     using MaybeColorPiority = std::optional<ColorWithPriority>;

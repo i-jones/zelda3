@@ -146,6 +146,12 @@ namespace
             ASSERT_TRUE(imagesEqual) << "Image differ";
             break;
         }
+        case PPUCommand::CommandType_PPUState:
+        {
+            auto state = cmd->command_as_PPUState();
+            ppu.applyState(state);
+            break;
+        }
         default:
             std::cerr << "Unknown command: " << PPUCommand::EnumNameCommandType(cmd->command_type());
             throw std::runtime_error("Unhandled command");
