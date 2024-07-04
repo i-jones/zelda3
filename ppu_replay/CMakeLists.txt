@@ -18,7 +18,9 @@ set(ReplayTests
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame900.ppu.zstd
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1500.ppu.zstd
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame1500_sparse.ppu.zstd
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame5500_sparse.ppu.zstd)
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/frame5500_sparse.ppu.zstd
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/diffFrame673.ppu.zstd
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/diffFrame5448.ppu.zstd)
 
 foreach(testppu ${TestPpuTypes})
   foreach(test ${ReplayTests})

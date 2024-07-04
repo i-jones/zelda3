@@ -44,7 +44,7 @@ public:
 private:
     using Windows = std::array<LayerWindow, kLayerIndexCount>;
     using MaybeColorPiority = std::optional<ColorWithPriority>;
-    using MainScreenOutput = std::pair<std::optional<ColorWithPriority>, LayerMaskFlags>;
+    using MainScreenOutput = std::pair<MaybeColorPiority, LayerMaskFlags>;
     using BackgroundRenders = std::array<std::optional<Background>, 4>;
 
     void initBus();

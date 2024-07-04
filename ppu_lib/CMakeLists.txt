@@ -18,7 +18,11 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 
 add_library(
   ppu_lib STATIC
+  ComparisonPPU.hpp
+  ComparisonPPU.cpp
   DebugPPU.hpp
+  DiffRecorder.hpp
+  DiffRecorder.cpp
   ppu_interface.h
   ppu_interface.cpp
   PPMWriter.hpp

@@ -89,6 +89,11 @@ struct OutputPixelFormat : public Vec<uint8_t, 4>
         fiveBit.blue = b() >> 3;
         return fiveBit;
     }
+
+    bool operator==(const OutputPixelFormat &rhs) const
+    {
+        return elem == rhs.elem;
+    }
 };
 static_assert(sizeof(OutputPixelFormat) == sizeof(uint32_t));
 static_assert(std::is_pod_v<OutputPixelFormat>);
